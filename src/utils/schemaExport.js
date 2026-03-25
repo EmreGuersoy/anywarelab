@@ -1,0 +1,114 @@
+/**
+ * schemaExport.js
+ *
+ * Maps the app's internal state to the Opentrons Labware Schema v2 JSON format.
+ *
+ * Well properties are now per-well (not shared at group level).
+ * Labels and ordering come from generateOpentronsLabels so they are always
+ * globally unique and position-consistent.
+ */
+
+import { generateOpentronsLabels } from './wellNaming'
+
+const LABWARE_TYPE_TO_CATEGORY = {
+  wellPlate:     'wellPlate',
+  reservoir:     'reservoir',
+  tubeRack:      'tubeRack',
+  aluminumBlock: 'aluminumBlock',
+}
+
+const round2 = n => Math.round(n * 100) / 100
+
+export function buildOpentronSchema(labwareConfig, wellGroups) {
+  const {
+    xDimension, yDimension, zDimension,
+    displayName, brand, loadName, labwareType,
+  } = labwareConfig
+
+  const { labelMap, ordering } = generateOpentronsLabels(wellGroups, yDimension)
+
+  const wells  = {}
+  const groups = []
+
+  wellGroups.forEach(group => {
+    const groupWellNames = []
+
+    group.wells.forEach(w => {
+      const key = `${group.id}::id::${w.id}`
+      const lbl = labelMap.get(key)
+      if (!lbl) return
+
+      const def = {
+        depth:             w.depth,
+        totalLiquidVolume: w.totalLiquidVolume,
+        shape:             w.shape,
+        x: round2(w.x),
+        y: round2(w.y),
+        z: 0,
+      }
+      if (w.shape === 'circular') {
+        def.diameter = w.diameter
+      } else {
+        def.xDimension = w.xDimension
+        def.yDimension = w.yDimension
+      }
+      wells[lbl] = def
+      groupWellNames.push(lbl)
+    })
+
+    // Use the first well's bottomShape for the group metadata (Opentrons v2 requirement)
+    const bottomShape = group.wells[0]?.bottomShape ?? 'flat'
+
+    groups.push({
+      metadata: {
+        wellBottomShape: bottomShape,
+        displayName:     group.name,
+      },
+      wells: groupWellNames,
+    })
+  })
+
+  const safeLoadName = (loadName || 'custom_labware')
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/__+/g, '_')
+    .replace(/^_|_$/g, '')
+
+  return {
+    ordering,
+    brand: { brand, brandId: [] },
+    metadata: {
+      displayName,
+      displayCategory: LABWARE_TYPE_TO_CATEGORY[labwareType] ?? 'wellPlate',
+      displayVolumeUnits: 'µL',
+      tags: [],
+    },
+    dimensions: { xDimension, yDimension, zDimension },
+    wells,
+    groups,
+    parameters: {
+      format:                     'irregular',
+      quirks:                     [],
+      isTiprack:                  false,
+      isMagneticModuleCompatible: false,
+      loadName:                   safeLoadName,
+    },
+    namespace:            'custom_beta',
+    version:              1,
+    schemaVersion:        2,
+    cornerOffsetFromSlot: { x: 0, y: 0, z: 0 },
+  }
+}
+
+export function downloadSchema(labwareConfig, wellGroups) {
+  const schema = buildOpentronSchema(labwareConfig, wellGroups)
+  const blob   = new Blob([JSON.stringify(schema, null, 2)], { type: 'application/json' })
+  const url    = URL.createObjectURL(blob)
+  const a      = document.createElement('a')
+  a.href       = url
+  a.download   = `${schema.parameters.loadName}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
