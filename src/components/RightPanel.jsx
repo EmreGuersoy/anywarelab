@@ -132,7 +132,9 @@ function AlignSection() {
   const {
     selectedWells, alignH, alignV, distributeH, distributeV, clearSelection,
     copySelectedWells, pasteWells, clipboard,
-    alignToPlateLeft, alignToPlateCenterH, alignToPlateRight, snapshot,
+    alignToPlateLeft, alignToPlateCenterH, alignToPlateRight,
+    alignToPlateTop, alignToPlateCenterV, alignToPlateBottom,
+    snapshot,
   } = useLabwareStore()
   const [gapStr, setGapStr] = useState('')
   const { labelMap } = useLabelMap()
@@ -182,21 +184,12 @@ function AlignSection() {
         <div>
           <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Align to Plate</div>
           <div className="grid grid-cols-3 gap-1.5">
-            <button
-              onClick={() => { snapshot(); alignToPlateLeft() }}
-              className={plateBtnCls}
-              title="Align well left edges to plate left edge"
-            >⇤ Left</button>
-            <button
-              onClick={() => { snapshot(); alignToPlateCenterH() }}
-              className={plateBtnCls}
-              title="Center wells on plate horizontal axis"
-            >⇔ Center</button>
-            <button
-              onClick={() => { snapshot(); alignToPlateRight() }}
-              className={plateBtnCls}
-              title="Align well right edges to plate right edge"
-            >⇥ Right</button>
+            <button onClick={() => { snapshot(); alignToPlateLeft() }}    className={plateBtnCls} title="Align left edges to plate left edge">⇤ Left</button>
+            <button onClick={() => { snapshot(); alignToPlateCenterH() }} className={plateBtnCls} title="Center on horizontal axis">↔ Center</button>
+            <button onClick={() => { snapshot(); alignToPlateRight() }}   className={plateBtnCls} title="Align right edges to plate right edge">⇥ Right</button>
+            <button onClick={() => { snapshot(); alignToPlateTop() }}     className={plateBtnCls} title="Align top edges to plate back edge">⤒ Top</button>
+            <button onClick={() => { snapshot(); alignToPlateCenterV() }} className={plateBtnCls} title="Center on vertical axis">↕ Middle</button>
+            <button onClick={() => { snapshot(); alignToPlateBottom() }}  className={plateBtnCls} title="Align bottom edges to plate front edge">⤓ Bottom</button>
           </div>
         </div>
 
@@ -665,40 +658,50 @@ function MultiWellsSection() {
   const w = region ? Math.abs(region.x2 - region.x1) : 0
   const h = region ? Math.abs(region.y2 - region.y1) : 0
 
-  const [rows,   setRows]   = useState(4)
-  const [cols,   setCols]   = useState(6)
+  const [rows,   setRows]   = useState('4')
+  const [cols,   setCols]   = useState('6')
   const [xSp,    setXSp]    = useState(9)
   const [ySp,    setYSp]    = useState(9)
   const [xStart, setXStart] = useState(0)
   const [yStart, setYStart] = useState(0)
 
+  const rowsNum = parseInt(rows) || 0
+  const colsNum = parseInt(cols) || 0
+  const rowsValid = rowsNum >= 1
+  const colsValid = colsNum >= 1
+
   // Sync inputs whenever a new region is drawn
   const regionKey = region ? `${region.x1},${region.y1},${region.x2},${region.y2}` : ''
   useEffect(() => {
     if (!region) return
-    setXSp(+(cols > 1 ? w / (cols - 1) : 9).toFixed(2))
-    setYSp(+(rows > 1 ? h / (rows - 1) : 9).toFixed(2))
+    const c = parseInt(cols) || 1
+    const r = parseInt(rows) || 1
+    setXSp(+(c > 1 ? w / (c - 1) : 9).toFixed(2))
+    setYSp(+(r > 1 ? h / (r - 1) : 9).toFixed(2))
     setXStart(+region.x1.toFixed(2))
     setYStart(+region.y2.toFixed(2))
   }, [regionKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (region) setXSp(+(cols > 1 ? w / (cols - 1) : 9).toFixed(2))
+    const c = parseInt(cols) || 1
+    if (region) setXSp(+(c > 1 ? w / (c - 1) : 9).toFixed(2))
   }, [cols]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (region) setYSp(+(rows > 1 ? h / (rows - 1) : 9).toFixed(2))
+    const r = parseInt(rows) || 1
+    if (region) setYSp(+(r > 1 ? h / (r - 1) : 9).toFixed(2))
   }, [rows]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!region) return null
 
   function handleAdd() {
+    if (!rowsValid || !colsValid) return
     snapshot()
-    addWellGroup({ name: `Wells ${rows}×${cols}` })
+    addWellGroup({ name: `Wells ${rowsNum}×${colsNum}` })
     const groupId = useLabwareStore.getState().selectedGroupId
     const positions = []
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rowsNum; r++) {
+      for (let c = 0; c < colsNum; c++) {
         positions.push({ x: xStart + c * xSp, y: yStart - r * ySp })
       }
     }
@@ -711,43 +714,57 @@ function MultiWellsSection() {
     }
   }
 
+  const spinBtn = 'w-6 h-6 flex-shrink-0 flex items-center justify-center bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200'
+
   return (
     <div className="border-b border-gray-200">
       <SectionHeader>Place Multiple Wells</SectionHeader>
-      <div className="px-3 py-2.5 space-y-2.5">
+      <div className="px-3 py-2 space-y-1.5">
 
         <div className="text-[9px] text-gray-400 bg-gray-50 border border-gray-100 rounded px-2 py-1">
           Region: {w.toFixed(1)} × {h.toFixed(1)} mm
         </div>
 
-        {/* Rows / Cols */}
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Rows</div>
-            <div className="flex items-center gap-0.5">
-              <button onClick={() => setRows(v => Math.max(1, v - 1))}
-                className="w-6 h-6 flex items-center justify-center bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200">−</button>
-              <input type="number" className={inp} value={rows} min={1} max={64}
-                onChange={e => setRows(Math.max(1, parseInt(e.target.value) || 1))} />
-              <button onClick={() => setRows(v => Math.min(64, v + 1))}
-                className="w-6 h-6 flex items-center justify-center bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200">+</button>
+        {/* Rows */}
+        <div>
+          <Field label="Rows">
+            <div className="flex items-center gap-1 w-full">
+              <button onClick={() => setRows(v => String(Math.max(1, (parseInt(v) || 0) - 1)))} className={spinBtn}>−</button>
+              <input
+                type="number" min={1} max={64}
+                className={inp + (!rowsValid ? ' border-red-500 focus:border-red-500 focus:ring-red-200' : '')}
+                value={rows}
+                onChange={e => setRows(e.target.value)}
+              />
+              <button onClick={() => setRows(v => String(Math.min(64, (parseInt(v) || 0) + 1)))} className={spinBtn}>+</button>
             </div>
-          </div>
-          <div>
-            <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Cols</div>
-            <div className="flex items-center gap-0.5">
-              <button onClick={() => setCols(v => Math.max(1, v - 1))}
-                className="w-6 h-6 flex items-center justify-center bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200">−</button>
-              <input type="number" className={inp} value={cols} min={1} max={64}
-                onChange={e => setCols(Math.max(1, parseInt(e.target.value) || 1))} />
-              <button onClick={() => setCols(v => Math.min(64, v + 1))}
-                className="w-6 h-6 flex items-center justify-center bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200">+</button>
-            </div>
-          </div>
+          </Field>
+          {!rowsValid && (
+            <div className="text-[9px] text-red-500 mt-0.5 pl-[84px]">Must be at least 1</div>
+          )}
         </div>
 
-        {/* Spacing */}
-        <div className="grid grid-cols-2 gap-2">
+        {/* Cols */}
+        <div>
+          <Field label="Columns">
+            <div className="flex items-center gap-1 w-full">
+              <button onClick={() => setCols(v => String(Math.max(1, (parseInt(v) || 0) - 1)))} className={spinBtn}>−</button>
+              <input
+                type="number" min={1} max={64}
+                className={inp + (!colsValid ? ' border-red-500 focus:border-red-500 focus:ring-red-200' : '')}
+                value={cols}
+                onChange={e => setCols(e.target.value)}
+              />
+              <button onClick={() => setCols(v => String(Math.min(64, (parseInt(v) || 0) + 1)))} className={spinBtn}>+</button>
+            </div>
+          </Field>
+          {!colsValid && (
+            <div className="text-[9px] text-red-500 mt-0.5 pl-[84px]">Must be at least 1</div>
+          )}
+        </div>
+
+        <div className="border-t border-gray-100 pt-1">
+          <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Spacing</div>
           <Field label="X spacing" unit="mm">
             <NumInput value={xSp} onChange={setXSp} min={0} step={0.01} />
           </Field>
@@ -756,8 +773,8 @@ function MultiWellsSection() {
           </Field>
         </div>
 
-        {/* Origin */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="border-t border-gray-100 pt-1">
+          <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Origin</div>
           <Field label="X start" unit="mm">
             <NumInput value={xStart} onChange={setXStart} min={0} step={0.01} />
           </Field>
@@ -766,14 +783,20 @@ function MultiWellsSection() {
           </Field>
         </div>
 
-        <div className="text-[9px] text-gray-500 font-semibold">
-          {rows * cols} wells total
+        <div className="text-[9px] font-semibold pt-0.5">
+          {rowsValid && colsValid
+            ? <span className="text-gray-500">{rowsNum * colsNum} wells total</span>
+            : <span className="text-red-500">Enter valid rows and columns</span>
+          }
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
-          <button onClick={handleAdd}
-            className="flex-1 py-1.5 bg-gray-900 hover:bg-gray-700 text-white text-[11px] font-semibold rounded transition-colors">
+        <div className="flex gap-2 pt-0.5">
+          <button onClick={handleAdd} disabled={!rowsValid || !colsValid}
+            className={'flex-1 py-1.5 text-[11px] font-semibold rounded transition-colors ' +
+              (rowsValid && colsValid
+                ? 'bg-gray-900 hover:bg-gray-700 text-white'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed')}>
             Add Wells
           </button>
           <button onClick={clearPendingMultiWells}

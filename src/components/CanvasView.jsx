@@ -372,7 +372,7 @@ function StatusBar({ zoom, xDim, yDim, activeTool, selCount }) {
   const hint = hints[activeTool] || ''
 
   return (
-    <div className="absolute bottom-2.5 left-3 flex items-center gap-2 pointer-events-none">
+    <div className="absolute bottom-2.5 right-3 flex items-center gap-2 pointer-events-none">
       <span className="text-[10px] font-mono bg-white/80 border border-gray-200 text-gray-500 px-2 py-0.5 rounded shadow-sm">
         {(zoom * 100).toFixed(0)}%
       </span>
@@ -395,7 +395,7 @@ function StatusBar({ zoom, xDim, yDim, activeTool, selCount }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function CanvasView({ fitSignal }) {
+export function CanvasView({ fitSignal, exportPngSignal }) {
   const containerRef = useRef()
   const svgRef       = useRef()
   const panRef       = useRef(null)
@@ -473,6 +473,40 @@ export function CanvasView({ fitSignal }) {
 
   // ── Fit to screen ───────────────────────────────────────────────────────────
   useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }) }, [fitSignal])
+
+  // ── Export PNG ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!exportPngSignal) return
+    const svgEl = svgRef.current
+    if (!svgEl) return
+    const SCALE   = 2   // retina
+    const w       = svgEl.width.baseVal.value
+    const h       = svgEl.height.baseVal.value
+    const svgStr  = new XMLSerializer().serializeToString(svgEl)
+    const blob    = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' })
+    const url     = URL.createObjectURL(blob)
+    const img     = new Image()
+    img.onload = () => {
+      const canvas  = document.createElement('canvas')
+      canvas.width  = w * SCALE
+      canvas.height = h * SCALE
+      const ctx     = canvas.getContext('2d')
+      ctx.scale(SCALE, SCALE)
+      ctx.fillStyle = '#F8F9FA'
+      ctx.fillRect(0, 0, w, h)
+      ctx.drawImage(img, 0, 0)
+      URL.revokeObjectURL(url)
+      canvas.toBlob(pngBlob => {
+        const a    = document.createElement('a')
+        a.href     = URL.createObjectURL(pngBlob)
+        a.download = 'labware_design.png'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      }, 'image/png')
+    }
+    img.src = url
+  }, [exportPngSignal])
 
   // ── Wheel zoom ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -761,10 +795,6 @@ export function CanvasView({ fitSignal }) {
 
       <StatusBar zoom={zoom} xDim={xDim} yDim={yDim} activeTool={activeTool} selCount={selectedWells.length} />
 
-      <div className="absolute bottom-2.5 right-3 text-[9px] text-gray-400 text-right pointer-events-none leading-4 font-mono">
-        <div>alt+drag · mid-btn = pan · scroll = zoom · shift+click = multi-sel</div>
-      </div>
-
       <AxisIndicator />
     </div>
   )
@@ -810,13 +840,6 @@ function AxisIndicator() {
       {/* Origin dot */}
       <circle cx={ox} cy={oy} r={2.5} fill="#9CA3AF" />
 
-      {/* BACK / FRONT labels */}
-      <text x={ox} y={oy - L - 16}
-        fill="#C4C9D4" fontSize="7" fontFamily="Inter,system-ui,sans-serif"
-        textAnchor="middle" letterSpacing="0.08em">BACK</text>
-      <text x={ox} y={oy + 15}
-        fill="#C4C9D4" fontSize="7" fontFamily="Inter,system-ui,sans-serif"
-        textAnchor="middle" letterSpacing="0.08em">FRONT</text>
     </svg>
   )
 }

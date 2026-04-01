@@ -6,7 +6,8 @@ import { CanvasView } from './CanvasView'
 import { useLabwareStore } from '../store/useLabwareStore'
 
 export function Editor() {
-  const [fitSignal, setFitSignal] = useState(0)
+  const [fitSignal,       setFitSignal]       = useState(0)
+  const [exportPngSignal, setExportPngSignal] = useState(0)
   const { undo, redo, snapshot, removeSelectedWells, selectedWells, pendingMultiWells,
           copySelectedWells, pasteWells } = useLabwareStore()
 
@@ -38,15 +39,12 @@ export function Editor() {
       {/* App header */}
       <header className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-200 flex-shrink-0 h-10">
         <span className="font-bold text-sm tracking-tight text-gray-900">
-          OT2 Labware Designer
-        </span>
-        <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 font-mono">
-          schema v2
+          Opentrons Custom Labware Designer
         </span>
       </header>
 
       {/* Tool strip */}
-      <Toolbar onFitView={() => setFitSignal(n => n + 1)} />
+      <Toolbar onFitView={() => setFitSignal(n => n + 1)} onExportPng={() => setExportPngSignal(n => n + 1)} />
 
       {/* Workspace */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -60,8 +58,8 @@ export function Editor() {
         </div>
 
         {/* Canvas — fills remaining space */}
-        <div className="relative z-0 flex-1 min-w-0 overflow-hidden">
-          <CanvasView fitSignal={fitSignal} />
+        <div className="relative z-0 flex-1 min-w-0 overflow-hidden flex flex-col">
+          <CanvasView fitSignal={fitSignal} exportPngSignal={exportPngSignal} />
         </div>
 
         {/* Right sidebar — selection properties, shown when wells are selected */}

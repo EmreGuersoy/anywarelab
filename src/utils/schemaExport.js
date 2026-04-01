@@ -44,7 +44,7 @@ export function buildOpentronSchema(labwareConfig, wellGroups) {
         shape:             w.shape,
         x: round2(w.x),
         y: round2(w.y),
-        z: 0,
+        z: round2(Math.max(0, zDimension - w.depth)),
       }
       if (w.shape === 'circular') {
         def.diameter = w.diameter
@@ -100,9 +100,22 @@ export function buildOpentronSchema(labwareConfig, wellGroups) {
   }
 }
 
+/**
+ * Serialize schema to JSON with ordering columns on single lines.
+ * Everything else uses 2-space indentation.
+ */
+function serializeSchema(schema) {
+  const json = JSON.stringify(schema, null, 2)
+  // Collapse each ordering column array [ "A1", "B1", ... ] onto one line
+  return json.replace(
+    /\[\n(\s+"[A-Z]+\d+"(?:,\n\s+"[A-Z]+\d+")*)\n\s+\]/g,
+    (_, inner) => '[' + inner.trim().replace(/,\s*\n\s*/g, ', ') + ']'
+  )
+}
+
 export function downloadSchema(labwareConfig, wellGroups) {
   const schema = buildOpentronSchema(labwareConfig, wellGroups)
-  const blob   = new Blob([JSON.stringify(schema, null, 2)], { type: 'application/json' })
+  const blob   = new Blob([serializeSchema(schema)], { type: 'application/json' })
   const url    = URL.createObjectURL(blob)
   const a      = document.createElement('a')
   a.href       = url

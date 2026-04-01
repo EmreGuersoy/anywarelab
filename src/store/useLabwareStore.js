@@ -74,6 +74,7 @@ export const useLabwareStore = create(
 
     // ── Plate config ─────────────────────────────────────────────────────────
     labwareConfig: {
+      labwareType: 'wellPlate',
       xDimension:  127.76,
       yDimension:  85.48,
       zDimension:  14.22,
@@ -272,38 +273,103 @@ export const useLabwareStore = create(
 
     alignToPlateLeft: () =>
       set(s => {
-        s.selectedWells.forEach(sel => {
-          if (!sel.wellId) return
+        // Find leftmost edge of the group, then shift all by the same delta
+        const wells = s.selectedWells.flatMap(sel => {
+          if (!sel.wellId) return []
           const g = s.wellGroups.find(g => g.id === sel.groupId)
           const w = g?.wells.find(w => w.id === sel.wellId)
-          if (!w) return
-          const halfW = w.shape === 'circular' ? w.diameter / 2 : w.xDimension / 2
-          w.x = halfW
+          return w ? [{ sel, w }] : []
         })
+        if (wells.length === 0) return
+        const minEdge = Math.min(...wells.map(({ w }) =>
+          w.x - (w.shape === 'circular' ? w.diameter / 2 : w.xDimension / 2)
+        ))
+        const dx = -minEdge   // shift so leftmost edge lands at x=0
+        wells.forEach(({ w }) => { w.x = Math.max(0, w.x + dx) })
       }),
 
     alignToPlateCenterH: () =>
       set(s => {
         const cx = s.labwareConfig.xDimension / 2
-        s.selectedWells.forEach(sel => {
-          if (!sel.wellId) return
+        const wells = s.selectedWells.flatMap(sel => {
+          if (!sel.wellId) return []
           const g = s.wellGroups.find(g => g.id === sel.groupId)
           const w = g?.wells.find(w => w.id === sel.wellId)
-          if (w) w.x = cx
+          return w ? [{ sel, w }] : []
         })
+        if (wells.length === 0) return
+        const minX    = Math.min(...wells.map(({ w }) => w.x))
+        const maxX    = Math.max(...wells.map(({ w }) => w.x))
+        const groupCx = (minX + maxX) / 2
+        const dx      = cx - groupCx
+        wells.forEach(({ w }) => { w.x += dx })
       }),
 
     alignToPlateRight: () =>
       set(s => {
         const { xDimension } = s.labwareConfig
-        s.selectedWells.forEach(sel => {
-          if (!sel.wellId) return
+        const wells = s.selectedWells.flatMap(sel => {
+          if (!sel.wellId) return []
           const g = s.wellGroups.find(g => g.id === sel.groupId)
           const w = g?.wells.find(w => w.id === sel.wellId)
-          if (!w) return
-          const halfW = w.shape === 'circular' ? w.diameter / 2 : w.xDimension / 2
-          w.x = xDimension - halfW
+          return w ? [{ sel, w }] : []
         })
+        if (wells.length === 0) return
+        const maxEdge = Math.max(...wells.map(({ w }) =>
+          w.x + (w.shape === 'circular' ? w.diameter / 2 : w.xDimension / 2)
+        ))
+        const dx = xDimension - maxEdge   // shift so rightmost edge lands at plate right
+        wells.forEach(({ w }) => { w.x += dx })
+      }),
+
+    alignToPlateTop: () =>
+      set(s => {
+        const { yDimension } = s.labwareConfig
+        const wells = s.selectedWells.flatMap(sel => {
+          if (!sel.wellId) return []
+          const g = s.wellGroups.find(g => g.id === sel.groupId)
+          const w = g?.wells.find(w => w.id === sel.wellId)
+          return w ? [w] : []
+        })
+        if (wells.length === 0) return
+        const maxEdge = Math.max(...wells.map(w =>
+          w.y + (w.shape === 'circular' ? w.diameter / 2 : w.yDimension / 2)
+        ))
+        const dy = yDimension - maxEdge
+        wells.forEach(w => { w.y += dy })
+      }),
+
+    alignToPlateCenterV: () =>
+      set(s => {
+        const cy = s.labwareConfig.yDimension / 2
+        const wells = s.selectedWells.flatMap(sel => {
+          if (!sel.wellId) return []
+          const g = s.wellGroups.find(g => g.id === sel.groupId)
+          const w = g?.wells.find(w => w.id === sel.wellId)
+          return w ? [w] : []
+        })
+        if (wells.length === 0) return
+        const minY    = Math.min(...wells.map(w => w.y))
+        const maxY    = Math.max(...wells.map(w => w.y))
+        const groupCy = (minY + maxY) / 2
+        const dy      = cy - groupCy
+        wells.forEach(w => { w.y += dy })
+      }),
+
+    alignToPlateBottom: () =>
+      set(s => {
+        const wells = s.selectedWells.flatMap(sel => {
+          if (!sel.wellId) return []
+          const g = s.wellGroups.find(g => g.id === sel.groupId)
+          const w = g?.wells.find(w => w.id === sel.wellId)
+          return w ? [w] : []
+        })
+        if (wells.length === 0) return
+        const minEdge = Math.min(...wells.map(w =>
+          w.y - (w.shape === 'circular' ? w.diameter / 2 : w.yDimension / 2)
+        ))
+        const dy = -minEdge
+        wells.forEach(w => { w.y = Math.max(0, w.y + dy) })
       }),
 
     // ── Actions: selection-relative alignment ─────────────────────────────────

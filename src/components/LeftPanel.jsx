@@ -1,7 +1,6 @@
 /**
  * LeftPanel.jsx — Plate configuration sidebar (left).
- * Contains: Plate dimensions/metadata, Well Groups.
- * Selection-driven sections moved to RightPanel.
+ * Contains: Labware type, Plate dimensions/metadata, Tools, Well Groups.
  */
 
 import { useState, useEffect, useRef } from 'react'
@@ -9,12 +8,23 @@ import { useLabwareStore } from '../store/useLabwareStore'
 
 // ── Shared primitives ──────────────────────────────────────────────────────────
 
-function SectionHeader({ children }) {
+function SectionHeader({ children, tooltip }) {
   return (
-    <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
-      <span className="text-[9px] font-bold tracking-widest uppercase text-gray-500">
+    <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-200 sticky top-0 z-10 flex items-center gap-1.5">
+      <span className="text-[9px] font-bold tracking-widest uppercase text-gray-500 flex-1">
         {children}
       </span>
+      {tooltip && (
+        <div className="relative group flex-shrink-0">
+          <div className="w-3.5 h-3.5 rounded-full border border-gray-300 bg-white flex items-center justify-center cursor-default">
+            <span className="text-[8px] text-gray-400 font-bold leading-none">?</span>
+          </div>
+          <div className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 text-white text-[10px] leading-relaxed rounded px-2.5 py-2 shadow-lg z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+            {tooltip}
+            <div className="absolute -top-1 right-1.5 w-2 h-2 bg-gray-900 rotate-45" />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -83,6 +93,43 @@ function TxtInput({ value, onChange }) {
   )
 }
 
+// ── Labware types (mirrors Opentrons custom labware generator) ─────────────────
+
+const LABWARE_TYPES = [
+  { value: 'wellPlate',     label: 'Well Plate'      },
+  { value: 'reservoir',     label: 'Reservoir'       },
+  { value: 'tubeRack',      label: 'Tube Rack'       },
+  { value: 'aluminumBlock', label: 'Aluminum Block'  },
+  { value: 'tipRack',       label: 'Tip Rack'        },
+]
+
+// ── Section: Labware Type ─────────────────────────────────────────────────────
+
+function LabwareTypeSection() {
+  const { labwareConfig, setConfigField } = useLabwareStore()
+  const current = LABWARE_TYPES.find(t => t.value === labwareConfig.labwareType) ?? LABWARE_TYPES[0]
+
+  return (
+    <div className="border-b border-gray-200">
+      <SectionHeader tooltip="Defines the category of your labware in the Opentrons ecosystem. This affects how the robot software classifies and handles it during a protocol run.">Labware Type</SectionHeader>
+      <div className="px-3 py-3 space-y-2">
+        <select
+          value={current.value}
+          onChange={e => setConfigField('labwareType', e.target.value)}
+          className={inp + ' cursor-pointer'}
+        >
+          {LABWARE_TYPES.map(t => (
+            <option key={t.value} value={t.value}>{t.label}</option>
+          ))}
+        </select>
+        <p className="text-[9px] text-gray-400 leading-snug">
+          Determines the labware category in the exported Opentrons schema.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ── Section: Plate ────────────────────────────────────────────────────────────
 
 function PlateSection() {
@@ -90,7 +137,7 @@ function PlateSection() {
   const c = labwareConfig
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader>Plate</SectionHeader>
+      <SectionHeader tooltip="Physical dimensions of the labware footprint. The SBS standard (127.76 × 85.48 mm) fits all standard Opentrons deck positions. Height (Z) is the total height from the deck surface to the top of the labware.">Plate</SectionHeader>
       <div className="px-3 py-2 space-y-1">
         <Field label="Display name">
           <TxtInput value={c.displayName} onChange={v => setConfigField('displayName', v)} />
@@ -119,6 +166,48 @@ function PlateSection() {
             Z = total labware height from deck surface
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Section: Tools ────────────────────────────────────────────────────────────
+
+const PLACE_TOOLS = [
+  { id: 'addWell',       icon: '⊕', label: 'Add Well',  desc: 'Click to place a single well' },
+  { id: 'multipleWells', icon: '⊞', label: 'Add Grid',  desc: 'Drag to place a well grid'    },
+]
+
+function ToolsSection() {
+  const { activeTool, setActiveTool } = useLabwareStore()
+
+  return (
+    <div className="border-b border-gray-200">
+      <SectionHeader tooltip="Place wells on your labware. Use Add Well to click and place individual wells, or Add Grid to drag a region and fill it with a uniform grid of wells. Wells can be repositioned after placement using the Select tool.">Add Wells</SectionHeader>
+      <div className="px-3 py-2 space-y-1.5">
+        {PLACE_TOOLS.map(t => {
+          const active = activeTool === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => setActiveTool(t.id)}
+              className={
+                'w-full flex items-center gap-2.5 px-3 py-2 rounded border text-left transition-colors ' +
+                (active
+                  ? 'bg-gray-900 border-gray-900 text-white'
+                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-400 hover:bg-gray-50')
+              }
+            >
+              <span className="text-base leading-none flex-shrink-0">{t.icon}</span>
+              <span className="flex flex-col min-w-0">
+                <span className="text-[11px] font-semibold leading-tight">{t.label}</span>
+                <span className={
+                  'text-[9px] leading-tight ' + (active ? 'text-gray-300' : 'text-gray-400')
+                }>{t.desc}</span>
+              </span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -189,7 +278,9 @@ function GroupsSection() {
 export function LeftPanel() {
   return (
     <div className="flex flex-col bg-white w-full">
+      <LabwareTypeSection />
       <PlateSection />
+      <ToolsSection />
       <GroupsSection />
       <div className="flex-1" />
     </div>

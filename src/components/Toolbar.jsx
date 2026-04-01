@@ -3,20 +3,17 @@
  * B&W style: white background, black active state, clean borders.
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLabwareStore } from '../store/useLabwareStore'
 import { downloadSchema } from '../utils/schemaExport'
 import { parseLabwareJSON } from '../utils/schemaImport'
 
 const TOOLS = [
-  { id: 'select',        label: 'Select',   icon: '↖', key: 'v', tip: 'Select / drag  [V]' },
-  { id: 'addWell',       label: 'Add Well', icon: '⊕', key: 'w', tip: 'Click to place a well  [W]' },
-  { id: 'multipleWells', label: 'Multi',    icon: '⊞', key: 'g', tip: 'Drag to place multiple wells  [G]' },
-  { id: 'reservoir',     label: 'Reservoir',icon: '▬', key: 'r', tip: 'Click to place a reservoir  [R]' },
-  { id: 'erase',         label: 'Erase',    icon: '✕', key: 'e', tip: 'Click a well to delete  [E]' },
+  { id: 'select', label: 'Select', icon: '↖', key: 'v', tip: 'Select / drag  [V]' },
+  { id: 'erase',  label: 'Erase',  icon: '✕', key: 'e', tip: 'Click a well to delete  [E]' },
 ]
 
-export function Toolbar({ onFitView }) {
+export function Toolbar({ onFitView, onExportPng }) {
   const {
     activeTool, setActiveTool,
     labwareConfig, wellGroups,
@@ -25,7 +22,20 @@ export function Toolbar({ onFitView }) {
     past, future,
   } = useLabwareStore()
 
-  const fileInputRef = useRef(null)
+  const fileInputRef   = useRef(null)
+  const exportMenuRef  = useRef(null)
+  const [exportOpen, setExportOpen] = useState(false)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function onClickOutside(e) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setExportOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
 
   function handleImport(e) {
     const file = e.target.files?.[0]
@@ -123,12 +133,30 @@ export function Toolbar({ onFitView }) {
       >
         ↑ Import JSON
       </button>
-      <button
-        onClick={() => downloadSchema(labwareConfig, wellGroups)}
-        className="flex items-center gap-1.5 px-3 py-1 bg-gray-900 hover:bg-gray-700 text-white text-xs font-semibold rounded transition-colors"
-      >
-        ↓ Export JSON
-      </button>
+      <div ref={exportMenuRef} className="relative">
+        <button
+          onClick={() => setExportOpen(v => !v)}
+          className="flex items-center gap-1.5 px-3 py-1 bg-gray-900 hover:bg-gray-700 text-white text-xs font-semibold rounded transition-colors"
+        >
+          ↓ Export ▾
+        </button>
+        {exportOpen && (
+          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[130px] overflow-hidden">
+            <button
+              onClick={() => { downloadSchema(labwareConfig, wellGroups); setExportOpen(false) }}
+              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 transition-colors border-b border-gray-100"
+            >
+              ↓ JSON file
+            </button>
+            <button
+              onClick={() => { onExportPng(); setExportOpen(false) }}
+              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              ↓ PNG image
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
