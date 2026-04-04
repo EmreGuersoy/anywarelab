@@ -36,13 +36,6 @@ export function Editor() {
 
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* App header */}
-      <header className="flex items-center gap-3 px-4 py-2 bg-white border-b border-gray-200 flex-shrink-0 h-10">
-        <span className="font-bold text-sm tracking-tight text-gray-900">
-          Opentrons Custom Labware Designer
-        </span>
-      </header>
-
       {/* Tool strip */}
       <Toolbar onFitView={() => setFitSignal(n => n + 1)} onExportPng={() => setExportPngSignal(n => n + 1)} />
 

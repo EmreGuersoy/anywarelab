@@ -39,20 +39,7 @@ export function makeGroup(overrides = {}) {
   }
 }
 
-// ── Seed: 96-well plate ───────────────────────────────────────────────────────
-
-function makeSeedWells() {
-  const wells = []
-  // Row A at y = 85.48 - 11.24 = 74.24; spacing 9 mm
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 12; c++) {
-      wells.push(makeWell(14.38 + c * 9, 74.24 - r * 9))
-    }
-  }
-  return wells
-}
-
-const seed = makeGroup({ name: 'Wells', wells: makeSeedWells() })
+const seed = makeGroup({ name: 'Wells', wells: [] })
 
 // ── selKey ────────────────────────────────────────────────────────────────────
 

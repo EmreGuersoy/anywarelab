@@ -19,9 +19,9 @@ function SectionHeader({ children, tooltip }) {
           <div className="w-3.5 h-3.5 rounded-full border border-gray-300 bg-white flex items-center justify-center cursor-default">
             <span className="text-[8px] text-gray-400 font-bold leading-none">?</span>
           </div>
-          <div className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 text-white text-[10px] leading-relaxed rounded px-2.5 py-2 shadow-lg z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          <div className="absolute right-full mr-2 top-0 w-max max-w-[220px] bg-gray-900 text-white text-[10px] leading-relaxed rounded px-2.5 py-2 shadow-lg z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150">
             {tooltip}
-            <div className="absolute -top-1 right-1.5 w-2 h-2 bg-gray-900 rotate-45" />
+            <div className="absolute -right-1 top-2 w-2 h-2 bg-gray-900 rotate-45" />
           </div>
         </div>
       )}
@@ -96,12 +96,19 @@ function TxtInput({ value, onChange }) {
 // ── Labware types (mirrors Opentrons custom labware generator) ─────────────────
 
 const LABWARE_TYPES = [
-  { value: 'wellPlate',     label: 'Well Plate'      },
-  { value: 'reservoir',     label: 'Reservoir'       },
-  { value: 'tubeRack',      label: 'Tube Rack'       },
-  { value: 'aluminumBlock', label: 'Aluminum Block'  },
-  { value: 'tipRack',       label: 'Tip Rack'        },
+  { value: 'wellPlate', label: 'Well Plate' },
+  { value: 'reservoir', label: 'Reservoir'  },
+  { value: 'tubeRack',  label: 'Tube Rack'  },
+  { value: 'tipRack',   label: 'Tip Rack'   },
 ]
+
+// Labels for the placement tools per labware type
+const TOOL_LABELS = {
+  wellPlate: { single: 'Add Well', grid: 'Add Grid',     singleDesc: 'Click to place a single well',     gridDesc: 'Drag to place a well grid'     },
+  reservoir: { single: 'Add Reservoir', grid: 'Add Grid', singleDesc: 'Click to place a reservoir',      gridDesc: 'Drag to place a reservoir grid' },
+  tubeRack:  { single: 'Add Tube', grid: 'Add Tube Grid',singleDesc: 'Click to place a single tube',     gridDesc: 'Drag to place a tube grid'     },
+  tipRack:   { single: 'Add Tip',  grid: 'Add Tip Grid', singleDesc: 'Click to place a single tip well', gridDesc: 'Drag to place a tip grid'      },
+}
 
 // ── Section: Labware Type ─────────────────────────────────────────────────────
 
@@ -111,7 +118,7 @@ function LabwareTypeSection() {
 
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader tooltip="Defines the category of your labware in the Opentrons ecosystem. This affects how the robot software classifies and handles it during a protocol run.">Labware Type</SectionHeader>
+      <SectionHeader tooltip="Defines the category of your labware in the Opentrons ecosystem. This affects how the robot software classifies and handles it during a protocol run. Choose the right labware type for accurate protocol execution.">Labware Type</SectionHeader>
       <div className="px-3 py-3 space-y-2">
         <select
           value={current.value}
@@ -122,9 +129,6 @@ function LabwareTypeSection() {
             <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </select>
-        <p className="text-[9px] text-gray-400 leading-snug">
-          Determines the labware category in the exported Opentrons schema.
-        </p>
       </div>
     </div>
   )
@@ -151,12 +155,12 @@ function PlateSection() {
         <div className="pt-1 border-t border-gray-100 space-y-1.5">
           <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">
             Footprint
-            <span className="ml-1 normal-case font-normal text-gray-400">(SBS standard: 127.76 × 85.48)</span>
+            <span className="ml-1 normal-case font-normal text-gray-400">(SBS: L 127.76 × W 85.48)</span>
           </div>
-          <Field label="Width (X)" unit="mm">
+          <Field label="Length (X)" unit="mm">
             <NumInput value={c.xDimension} onChange={v => setConfigField('xDimension', v)} onFocus={snapshot} min={0} step={0.01} />
           </Field>
-          <Field label="Length (Y)" unit="mm">
+          <Field label="Width (Y)" unit="mm">
             <NumInput value={c.yDimension} onChange={v => setConfigField('yDimension', v)} onFocus={snapshot} min={0} step={0.01} />
           </Field>
           <Field label="Height (Z)" unit="mm">
@@ -173,19 +177,20 @@ function PlateSection() {
 
 // ── Section: Tools ────────────────────────────────────────────────────────────
 
-const PLACE_TOOLS = [
-  { id: 'addWell',       icon: '⊕', label: 'Add Well',  desc: 'Click to place a single well' },
-  { id: 'multipleWells', icon: '⊞', label: 'Add Grid',  desc: 'Drag to place a well grid'    },
-]
-
 function ToolsSection() {
-  const { activeTool, setActiveTool } = useLabwareStore()
+  const { activeTool, setActiveTool, labwareConfig } = useLabwareStore()
+  const labels = TOOL_LABELS[labwareConfig.labwareType] ?? TOOL_LABELS.wellPlate
+
+  const tools = [
+    { id: 'addWell',       icon: '⊕', label: labels.single, desc: labels.singleDesc },
+    { id: 'multipleWells', icon: '⊞', label: labels.grid,   desc: labels.gridDesc   },
+  ]
 
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader tooltip="Place wells on your labware. Use Add Well to click and place individual wells, or Add Grid to drag a region and fill it with a uniform grid of wells. Wells can be repositioned after placement using the Select tool.">Add Wells</SectionHeader>
+      <SectionHeader tooltip="Place items on your labware. Use the single tool to click and place one at a time, or the grid tool to drag a region and fill it with a uniform array. Items can be repositioned after placement using the Select tool.">Add Wells</SectionHeader>
       <div className="px-3 py-2 space-y-1.5">
-        {PLACE_TOOLS.map(t => {
+        {tools.map(t => {
           const active = activeTool === t.id
           return (
             <button
@@ -201,9 +206,9 @@ function ToolsSection() {
               <span className="text-base leading-none flex-shrink-0">{t.icon}</span>
               <span className="flex flex-col min-w-0">
                 <span className="text-[11px] font-semibold leading-tight">{t.label}</span>
-                <span className={
-                  'text-[9px] leading-tight ' + (active ? 'text-gray-300' : 'text-gray-400')
-                }>{t.desc}</span>
+                <span className={'text-[9px] leading-tight ' + (active ? 'text-gray-300' : 'text-gray-400')}>
+                  {t.desc}
+                </span>
               </span>
             </button>
           )

@@ -318,17 +318,17 @@ function WellPropertiesSection() {
             <NumInput value={firstWell.diameter} onChange={v => patch({ diameter: v })} onFocus={snapshot} min={0} />
           </Field>
         ) : (
-          <div className="grid grid-cols-2 gap-x-1">
-            <Field label="W" unit="mm">
+          <>
+            <Field label="Length (X)" unit="mm">
               <NumInput value={firstWell.xDimension} onChange={v => patch({ xDimension: v })} onFocus={snapshot} min={0} />
             </Field>
-            <Field label="H" unit="mm">
+            <Field label="Width (Y)" unit="mm">
               <NumInput value={firstWell.yDimension} onChange={v => patch({ yDimension: v })} onFocus={snapshot} min={0} />
             </Field>
-          </div>
+          </>
         )}
 
-        <Field label="Depth" unit="mm">
+        <Field label="Depth (Z)" unit="mm">
           <NumInput value={firstWell.depth} onChange={v => patch({ depth: v })} onFocus={snapshot} min={0} />
         </Field>
 

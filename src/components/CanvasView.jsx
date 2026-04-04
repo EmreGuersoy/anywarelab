@@ -22,25 +22,41 @@ const clamp    = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const C = {
-  bg:          '#F8F9FA',
-  dotGrid:     '#D1D5DB',
-  plateFill:   '#FFFFFF',
-  plateBorder: '#111827',
-  well:        '#FFFFFF',
-  wellStroke:  '#111827',
-  wellSel:     '#DBEAFE',
-  wellSelStk:  '#1D4ED8',
-  wellAnchor:  '#EFF6FF',
-  wellAnchorS: '#1E40AF',
-  fiduc:       '#374151',
-  fiducLight:  '#9CA3AF',
-  dim:         '#6B7280',
-  axisLabel:   '#374151',
-  marquee:     '#1D4ED8',
-  marqueeF:    'rgba(29,78,216,0.06)',
-  drawRect:    '#374151',
-  drawRectF:   'rgba(55,65,81,0.05)',
-  a1:          '#EF4444',
+  bg:            '#F8F9FA',
+  dotGrid:       '#D1D5DB',
+  plateFill:     '#FFFFFF',
+  plateBorder:   '#111827',
+  well:          '#FFFFFF',
+  wellStroke:    '#111827',
+  wellSel:       '#DBEAFE',
+  wellSelStk:    '#1D4ED8',
+  wellAnchor:    '#EFF6FF',
+  wellAnchorS:   '#1E40AF',
+  fiduc:         '#374151',
+  fiducLight:    '#9CA3AF',
+  dim:           '#6B7280',
+  axisLabel:     '#374151',
+  marquee:       '#1D4ED8',
+  marqueeF:      'rgba(29,78,216,0.06)',
+  drawRect:      '#374151',
+  drawRectF:     'rgba(55,65,81,0.05)',
+  a1:            '#EF4444',
+  // Violation colours
+  vOutsideFill:  '#FEE2E2',
+  vOutsideStk:   '#DC2626',
+  vClippedFill:  '#FFF7ED',
+  vClippedStk:   '#EA580C',
+}
+
+// Returns 'outside' | 'clipped' | null for a given well vs plate bounds.
+// 'outside' → well center is outside the plate footprint (red).
+// 'clipped' → center is inside but one or more edges cross the boundary (orange).
+function getViolation(w, xDim, yDim) {
+  if (w.x < 0 || w.x > xDim || w.y < 0 || w.y > yDim) return 'outside'
+  const hw = w.shape === 'circular' ? w.diameter / 2 : w.xDimension / 2
+  const hh = w.shape === 'circular' ? w.diameter / 2 : w.yDimension / 2
+  if (w.x - hw < 0 || w.x + hw > xDim || w.y - hh < 0 || w.y + hh > yDim) return 'clipped'
+  return null
 }
 
 
@@ -130,7 +146,7 @@ function AxisLabels({ px, py, scale, yDim, flatWells }) {
 // ── Well layer ────────────────────────────────────────────────────────────────
 // All wells are now flat individual objects with per-well properties.
 
-function WellLayer({ group, selectedWells, labelMap, px, py, scale, yDim, onWellMouseDown }) {
+function WellLayer({ group, selectedWells, labelMap, px, py, scale, xDim, yDim, onWellMouseDown }) {
   const selKeys   = useMemo(() => new Set(selectedWells.map(selKey)), [selectedWells])
   const anchorKey = selectedWells.length > 0 ? selKey(selectedWells[0]) : null
 
@@ -146,10 +162,20 @@ function WellLayer({ group, selectedWells, labelMap, px, py, scale, yDim, onWell
         const isSel    = selKeys.has(wellKey)
         const isAnchor = wellKey === anchorKey && selectedWells.length > 1
         const displayLabel = labelMap?.get(wellKey) ?? ''
+        const violation    = getViolation(w, xDim, yDim)
 
+        // Base fill / stroke from selection state
         const fill   = isAnchor ? C.wellAnchor  : isSel ? C.wellSel    : C.well
         const stroke = isAnchor ? C.wellAnchorS : isSel ? C.wellSelStk : C.wellStroke
         const sw     = isAnchor ? 1.8 : isSel ? 1.5 : 1
+
+        // Violation ring colours
+        const vFill = violation === 'outside' ? C.vOutsideFill
+                    : violation === 'clipped'  ? C.vClippedFill
+                    : null
+        const vStk  = violation === 'outside' ? C.vOutsideStk
+                    : violation === 'clipped'  ? C.vClippedStk
+                    : null
 
         const showLabel = w.shape === 'circular'
           ? (w.diameter * scale) >= 10
@@ -167,7 +193,11 @@ function WellLayer({ group, selectedWells, labelMap, px, py, scale, yDim, onWell
           return (
             <g key={w.id} style={{ cursor: 'pointer' }}
               onMouseDown={e => onWellMouseDown(e, group, w.id, w.x, w.y)}>
-              <circle cx={sx} cy={sy} r={r} fill={fill} stroke={stroke} strokeWidth={sw} />
+              {/* Violation outer ring — rendered beneath the well */}
+              {violation && (
+                <circle cx={sx} cy={sy} r={r + 3} fill={vFill} stroke={vStk} strokeWidth={1.5} opacity={0.85} />
+              )}
+              <circle cx={sx} cy={sy} r={r} fill={fill} stroke={violation ? vStk : stroke} strokeWidth={violation ? 2 : sw} />
               {showLabel && (
                 <text x={sx} y={sy + labelSize * 0.38} textAnchor="middle"
                   fontSize={labelSize} fontFamily="Inter, system-ui, sans-serif"
@@ -184,8 +214,13 @@ function WellLayer({ group, selectedWells, labelMap, px, py, scale, yDim, onWell
         return (
           <g key={w.id} style={{ cursor: 'pointer' }}
             onMouseDown={e => onWellMouseDown(e, group, w.id, w.x, w.y)}>
+          {/* Violation outer ring */}
+          {violation && (
+            <rect x={sx - rw / 2 - 3} y={sy - rh / 2 - 3} width={rw + 6} height={rh + 6} rx={3}
+              fill={vFill} stroke={vStk} strokeWidth={1.5} opacity={0.85} />
+          )}
             <rect x={sx - rw / 2} y={sy - rh / 2} width={rw} height={rh} rx={1.5}
-              fill={fill} stroke={stroke} strokeWidth={sw} />
+              fill={fill} stroke={violation ? vStk : stroke} strokeWidth={violation ? 2 : sw} />
             {showLabel && (
               <text x={sx} y={sy + labelSize * 0.38} textAnchor="middle"
                 fontSize={labelSize} fontFamily="Inter, system-ui, sans-serif"
@@ -359,6 +394,113 @@ function BackgroundGrid() {
   )
 }
 
+// ── Empty-state overlay ───────────────────────────────────────────────────────
+// Shown on the canvas when no wells have been placed yet.
+
+function EmptyStateOverlay({ wellGroups, plateX, plateY, plateW, plateH, zoom }) {
+  const totalWells = wellGroups.reduce((n, g) => n + g.wells.length, 0)
+  if (totalWells > 0) return null
+
+  // Position the card centred on the plate in screen space
+  const cx = plateX + plateW / 2
+  const cy = plateY + plateH / 2
+
+  const steps = [
+    { n: '1', text: 'Choose a labware type in the left panel' },
+    { n: '2', text: 'Set the plate dimensions (Length, Width, Height)' },
+    { n: '3', text: 'Use Add Well or Add Grid to place wells' },
+  ]
+
+  // Scale font/size with zoom so it stays legible but not overwhelming
+  const scale = clamp(zoom, 0.5, 1.4)
+
+  return (
+    <g style={{ pointerEvents: 'none' }}>
+      {/* Frosted card background */}
+      <foreignObject
+        x={cx - 180 * scale}
+        y={cy - 110 * scale}
+        width={360 * scale}
+        height={220 * scale}
+      >
+        <div
+          xmlns="http://www.w3.org/1999/xhtml"
+          style={{
+            width: '100%', height: '100%',
+            background: 'rgba(255,255,255,0.92)',
+            border: '1px solid #E5E7EB',
+            borderRadius: 12 * scale,
+            boxShadow: '0 4px 24px rgba(0,0,0,0.07)',
+            padding: `${20 * scale}px ${24 * scale}px`,
+            boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12 * scale,
+          }}
+        >
+          <div style={{ fontSize: 13 * scale, fontWeight: 700, color: '#111827', letterSpacing: '-0.01em', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            Start your design
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 * scale }}>
+            {steps.map(({ n, text }) => (
+              <div key={n} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 * scale }}>
+                <div style={{
+                  width: 18 * scale, height: 18 * scale, borderRadius: '50%',
+                  background: '#111827', color: '#fff',
+                  fontSize: 9 * scale, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, fontFamily: 'Inter, system-ui, sans-serif',
+                }}>
+                  {n}
+                </div>
+                <span style={{ fontSize: 10.5 * scale, color: '#6B7280', lineHeight: 1.45, fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  {text}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </foreignObject>
+    </g>
+  )
+}
+
+// ── Violation overlay ─────────────────────────────────────────────────────────
+// Shows a badge summary when any wells violate the plate boundary.
+
+function ViolationOverlay({ wellGroups, xDim, yDim }) {
+  let outside = 0
+  let clipped = 0
+  wellGroups.forEach(g => g.wells.forEach(w => {
+    const v = getViolation(w, xDim, yDim)
+    if (v === 'outside') outside++
+    else if (v === 'clipped') clipped++
+  }))
+
+  if (outside === 0 && clipped === 0) return null
+
+  return (
+    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 pointer-events-none">
+      {outside > 0 && (
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-red-300 bg-red-50 shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+          <span className="text-[11px] font-semibold text-red-700">
+            {outside} well{outside !== 1 ? 's' : ''} outside plate bounds
+          </span>
+        </div>
+      )}
+      {clipped > 0 && (
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-orange-300 bg-orange-50 shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
+          <span className="text-[11px] font-semibold text-orange-700">
+            {clipped} well{clipped !== 1 ? 's' : ''} partially outside bounds
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Status bar ────────────────────────────────────────────────────────────────
 
 function StatusBar({ zoom, xDim, yDim, activeTool, selCount }) {
@@ -475,38 +617,74 @@ export function CanvasView({ fitSignal, exportPngSignal }) {
   useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }) }, [fitSignal])
 
   // ── Export PNG ──────────────────────────────────────────────────────────────
+  // Builds a clean SVG with only the plate + wells (no grid, annotations, etc.)
   useEffect(() => {
     if (!exportPngSignal) return
-    const svgEl = svgRef.current
-    if (!svgEl) return
-    const SCALE   = 2   // retina
-    const w       = svgEl.width.baseVal.value
-    const h       = svgEl.height.baseVal.value
-    const svgStr  = new XMLSerializer().serializeToString(svgEl)
-    const blob    = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' })
-    const url     = URL.createObjectURL(blob)
-    const img     = new Image()
+
+    const PX_PER_MM = 6          // export resolution: 6 px per mm
+    const PAD       = 24         // white padding around plate in px
+    const SW        = 1.5        // stroke width (px)
+
+    const W = xDim * PX_PER_MM + PAD * 2
+    const H = yDim * PX_PER_MM + PAD * 2
+
+    const toX = ox =>  PAD + ox * PX_PER_MM
+    const toY = oy =>  PAD + (yDim - oy) * PX_PER_MM
+
+    // Build well elements
+    const wellParts = wellGroups.flatMap(group =>
+      group.wells.map(w => {
+        const cx    = toX(w.x)
+        const cy    = toY(w.y)
+        const key   = `${group.id}::id::${w.id}`
+        const label = labelMap?.get(key) ?? ''
+
+        const minDim   = w.shape === 'circular' ? w.diameter : Math.min(w.xDimension, w.yDimension)
+        const fontSize = Math.min(Math.max(minDim * PX_PER_MM * 0.32, 4), 11)
+        const showLabel = minDim * PX_PER_MM >= 10
+
+        const textEl = showLabel && label
+          ? `<text x="${cx}" y="${cy + fontSize * 0.38}" text-anchor="middle" font-size="${fontSize}" font-family="Inter, system-ui, sans-serif" fill="#6B7280" style="pointer-events:none">${label}</text>`
+          : ''
+
+        if (w.shape === 'circular') {
+          const r = (w.diameter / 2) * PX_PER_MM
+          return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#fff" stroke="#111827" stroke-width="${SW}"/>${textEl}`
+        }
+        const rw = w.xDimension * PX_PER_MM
+        const rh = w.yDimension * PX_PER_MM
+        return `<rect x="${cx - rw / 2}" y="${cy - rh / 2}" width="${rw}" height="${rh}" rx="2" fill="#fff" stroke="#111827" stroke-width="${SW}"/>${textEl}`
+      })
+    )
+
+    const svgStr = [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
+      `<rect width="${W}" height="${H}" fill="#ffffff"/>`,
+      `<rect x="${PAD}" y="${PAD}" width="${xDim * PX_PER_MM}" height="${yDim * PX_PER_MM}" rx="4" fill="#ffffff" stroke="#111827" stroke-width="${SW}"/>`,
+      ...wellParts,
+      `</svg>`,
+    ].join('\n')
+
+    const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' })
+    const url  = URL.createObjectURL(blob)
+    const img  = new Image()
     img.onload = () => {
       const canvas  = document.createElement('canvas')
-      canvas.width  = w * SCALE
-      canvas.height = h * SCALE
-      const ctx     = canvas.getContext('2d')
-      ctx.scale(SCALE, SCALE)
-      ctx.fillStyle = '#F8F9FA'
-      ctx.fillRect(0, 0, w, h)
-      ctx.drawImage(img, 0, 0)
+      canvas.width  = W
+      canvas.height = H
+      canvas.getContext('2d').drawImage(img, 0, 0)
       URL.revokeObjectURL(url)
       canvas.toBlob(pngBlob => {
         const a    = document.createElement('a')
         a.href     = URL.createObjectURL(pngBlob)
-        a.download = 'labware_design.png'
+        a.download = `${labwareConfig.loadName || 'labware_design'}.png`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
       }, 'image/png')
     }
     img.src = url
-  }, [exportPngSignal])
+  }, [exportPngSignal]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Wheel zoom ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -755,6 +933,13 @@ export function CanvasView({ fitSignal, exportPngSignal }) {
         <DimensionAnnotations px={plateX} py={plateY} pw={plateW} ph={plateH} xDim={xDim} yDim={yDim} />
         <AxisLabels px={plateX} py={plateY} scale={scale} yDim={yDim} flatWells={flatWells} />
 
+        <EmptyStateOverlay
+          wellGroups={wellGroups}
+          plateX={plateX} plateY={plateY}
+          plateW={plateW} plateH={plateH}
+          zoom={zoom}
+        />
+
         {wellGroups.map(group => (
           <WellLayer
             key={group.id}
@@ -762,7 +947,7 @@ export function CanvasView({ fitSignal, exportPngSignal }) {
             selectedWells={selectedWells}
             labelMap={labelMap}
             px={plateX} py={plateY}
-            scale={scale} yDim={yDim}
+            scale={scale} xDim={xDim} yDim={yDim}
             onWellMouseDown={handleWellMouseDown}
           />
         ))}
@@ -793,6 +978,7 @@ export function CanvasView({ fitSignal, exportPngSignal }) {
         )}
       </svg>
 
+      <ViolationOverlay wellGroups={wellGroups} xDim={xDim} yDim={yDim} />
       <StatusBar zoom={zoom} xDim={xDim} yDim={yDim} activeTool={activeTool} selCount={selectedWells.length} />
 
       <AxisIndicator />

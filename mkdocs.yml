@@ -1,0 +1,79 @@
+site_name: Anywarelab
+site_description: Browser-based custom labware designer for the Opentrons platform
+site_url: https://anywarelab.readthedocs.io
+repo_url: https://github.com/EmreGuersoy/OT_anyware
+repo_name: EmreGuersoy/OT_anyware
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: black
+      accent: gray
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Quick Start: getting-started/quick-start.md
+    - Interface Layout: getting-started/interface.md
+  - Labware:
+    - Labware Types: labware/types.md
+    - Plate Dimensions: labware/plate-dimensions.md
+    - Well Groups: labware/well-groups.md
+  - Canvas & Tools:
+    - Placement Tools: tools/placement.md
+    - Well Properties: tools/well-properties.md
+    - Edge Offsets: tools/edge-offsets.md
+    - Boundary Constraints: tools/constraints.md
+  - Alignment:
+    - Align to Plate: alignment/align-plate.md
+    - Align to Each Other: alignment/align-each.md
+    - Distribute: alignment/distribute.md
+  - Import & Export:
+    - Export JSON: io/export-json.md
+    - Export PNG: io/export-png.md
+    - Import JSON: io/import-json.md
+  - Reference:
+    - Keyboard Shortcuts: reference/shortcuts.md
+    - Schema Reference: reference/schema.md
+    - Coordinate System: reference/coordinates.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/EmreGuersoy/OT_anyware
