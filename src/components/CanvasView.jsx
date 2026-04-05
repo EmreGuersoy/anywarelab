@@ -14,6 +14,7 @@
 import { useRef, useState, useEffect, useMemo } from 'react'
 import { useLabwareStore, selKey } from '../store/useLabwareStore'
 import { useLabelMap } from '../utils/useLabelMap'
+import { getWellViolation } from '../utils/validation'
 
 const MARGIN   = 80
 const MIN_ZOOM = 0.12
@@ -48,16 +49,6 @@ const C = {
   vClippedStk:   '#EA580C',
 }
 
-// Returns 'outside' | 'clipped' | null for a given well vs plate bounds.
-// 'outside' → well center is outside the plate footprint (red).
-// 'clipped' → center is inside but one or more edges cross the boundary (orange).
-function getViolation(w, xDim, yDim) {
-  if (w.x < 0 || w.x > xDim || w.y < 0 || w.y > yDim) return 'outside'
-  const hw = w.shape === 'circular' ? w.diameter / 2 : w.xDimension / 2
-  const hh = w.shape === 'circular' ? w.diameter / 2 : w.yDimension / 2
-  if (w.x - hw < 0 || w.x + hw > xDim || w.y - hh < 0 || w.y + hh > yDim) return 'clipped'
-  return null
-}
 
 
 // ── Fiducial markers ──────────────────────────────────────────────────────────
@@ -162,7 +153,7 @@ function WellLayer({ group, selectedWells, labelMap, px, py, scale, xDim, yDim, 
         const isSel    = selKeys.has(wellKey)
         const isAnchor = wellKey === anchorKey && selectedWells.length > 1
         const displayLabel = labelMap?.get(wellKey) ?? ''
-        const violation    = getViolation(w, xDim, yDim)
+        const violation    = getWellViolation(w, xDim, yDim)
 
         // Base fill / stroke from selection state
         const fill   = isAnchor ? C.wellAnchor  : isSel ? C.wellSel    : C.well
@@ -472,7 +463,7 @@ function ViolationOverlay({ wellGroups, xDim, yDim }) {
   let outside = 0
   let clipped = 0
   wellGroups.forEach(g => g.wells.forEach(w => {
-    const v = getViolation(w, xDim, yDim)
+    const v = getWellViolation(w, xDim, yDim)
     if (v === 'outside') outside++
     else if (v === 'clipped') clipped++
   }))

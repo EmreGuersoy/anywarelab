@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useLabwareStore } from '../store/useLabwareStore'
+import { QuestionTooltip } from './QuestionTooltip'
 
 // ── Shared primitives ──────────────────────────────────────────────────────────
 
@@ -14,17 +15,7 @@ function SectionHeader({ children, tooltip }) {
       <span className="text-[9px] font-bold tracking-widest uppercase text-gray-500 flex-1">
         {children}
       </span>
-      {tooltip && (
-        <div className="relative group flex-shrink-0">
-          <div className="w-3.5 h-3.5 rounded-full border border-gray-300 bg-white flex items-center justify-center cursor-default">
-            <span className="text-[8px] text-gray-400 font-bold leading-none">?</span>
-          </div>
-          <div className="absolute right-full mr-2 top-0 w-max max-w-[220px] bg-gray-900 text-white text-[10px] leading-relaxed rounded px-2.5 py-2 shadow-lg z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-            {tooltip}
-            <div className="absolute -right-1 top-2 w-2 h-2 bg-gray-900 rotate-45" />
-          </div>
-        </div>
-      )}
+      {tooltip && <QuestionTooltip text={tooltip} />}
     </div>
   )
 }
@@ -199,7 +190,7 @@ function ToolsSection() {
               className={
                 'w-full flex items-center gap-2.5 px-3 py-2 rounded border text-left transition-colors ' +
                 (active
-                  ? 'bg-gray-900 border-gray-900 text-white'
+                  ? 'bg-gray-700 border-gray-700 text-white'
                   : 'bg-white border-gray-200 text-gray-700 hover:border-gray-400 hover:bg-gray-50')
               }
             >
@@ -226,7 +217,7 @@ function GroupsSection() {
 
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader>Well Groups</SectionHeader>
+      <SectionHeader tooltip="Wells are organised into named groups. Each group carries a shared bottom shape in the exported JSON. Use multiple groups to distinguish different regions of your labware, such as sample wells vs. controls.">Well Groups</SectionHeader>
       <div className="px-3 py-2 space-y-1">
         {wellGroups.map(g => {
           const isSelected = selectedGroupId === g.id

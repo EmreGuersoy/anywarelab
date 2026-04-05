@@ -7,13 +7,13 @@ import { useRef, useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 
 const SUPPORT_LINKS = [
-  { to: '/support/how-to-use', label: 'How to Use' },
-  { to: '/support/faq',        label: 'FAQ'        },
-  { to: '/support/contact',    label: 'Contact'    },
+  { to: 'https://anywarelab.readthedocs.io', label: 'Docs', external: true },
+  { to: '/support/faq',                      label: 'FAQ'                  },
+  { to: '/support/contact',                  label: 'Contact'              },
 ]
 
 const linkCls = active =>
-  'text-sm font-medium transition-colors px-1 py-0.5 rounded ' +
+  'text-sm font-medium transition-colors px-1.5 py-1 rounded ' +
   (active ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900')
 
 export function AppNav() {
@@ -37,15 +37,15 @@ export function AppNav() {
   useEffect(() => { setSupportOpen(false) }, [location.pathname])
 
   return (
-    <header className="flex items-center px-4 bg-white border-b border-gray-200 flex-shrink-0 h-10 relative z-50">
+    <header className="flex items-center px-6 bg-white border-b border-gray-200 flex-shrink-0 h-14 relative z-50">
 
       {/* Left: app title */}
-      <span className="font-bold text-sm tracking-tight text-gray-900 w-[240px] flex-shrink-0">
+      <span className="font-bold text-base tracking-tight text-gray-900 w-[240px] flex-shrink-0">
         Anywarelab
       </span>
 
       {/* Center: nav links */}
-      <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-5">
+      <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-7">
 
         <NavLink to="/" end className={({ isActive }) => linkCls(isActive)}>
           Home
@@ -55,19 +55,7 @@ export function AppNav() {
           Design
         </NavLink>
 
-        <a
-          href="https://anywarelab.readthedocs.io"
-          target="_blank"
-          rel="noopener noreferrer"
-          className={linkCls(false) + ' flex items-center gap-1'}
-        >
-          Docs
-          <svg className="w-2.5 h-2.5 text-gray-300" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 1h6v6M9 1L1 9"/>
-          </svg>
-        </a>
-
-        <NavLink to="/about" className={({ isActive }) => linkCls(isActive)}>
+<NavLink to="/about" className={({ isActive }) => linkCls(isActive)}>
           About
         </NavLink>
 
@@ -85,18 +73,33 @@ export function AppNav() {
 
           {supportOpen && (
             <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[150px] overflow-hidden">
-              {SUPPORT_LINKS.map(({ to, label }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={({ isActive }) =>
-                    'block px-4 py-2 text-xs transition-colors border-b last:border-b-0 border-gray-100 ' +
-                    (isActive ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700 hover:bg-gray-50')
-                  }
-                >
-                  {label}
-                </NavLink>
-              ))}
+              {SUPPORT_LINKS.map(({ to, label, external }) =>
+                external ? (
+                  <a
+                    key={to}
+                    href={to}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                  >
+                    {label}
+                    <svg className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 1h6v6M9 1L1 9"/>
+                    </svg>
+                  </a>
+                ) : (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    className={({ isActive }) =>
+                      'block px-4 py-2 text-xs transition-colors border-b last:border-b-0 border-gray-100 ' +
+                      (isActive ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-700 hover:bg-gray-50')
+                    }
+                  >
+                    {label}
+                  </NavLink>
+                )
+              )}
             </div>
           )}
         </div>
@@ -123,7 +126,7 @@ function GitHubStarButton() {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={
-        'flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-medium transition-all duration-150 select-none ' +
+        'flex items-center gap-2 px-4 py-1.5 rounded-full border text-sm font-medium transition-all duration-150 select-none ' +
         (hovered
           ? 'bg-gray-900 border-gray-900 text-white'
           : 'bg-white border-gray-300 text-gray-700')

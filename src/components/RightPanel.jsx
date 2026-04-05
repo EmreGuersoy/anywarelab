@@ -7,15 +7,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLabwareStore, selKey } from '../store/useLabwareStore'
 import { useLabelMap } from '../utils/useLabelMap'
+import { QuestionTooltip } from './QuestionTooltip'
 
 // ── Shared primitives ──────────────────────────────────────────────────────────
 
-function SectionHeader({ children }) {
+function SectionHeader({ children, tooltip }) {
   return (
-    <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
-      <span className="text-[9px] font-bold tracking-widest uppercase text-gray-500">
+    <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-200 sticky top-0 z-10 flex items-center gap-1.5">
+      <span className="text-[9px] font-bold tracking-widest uppercase text-gray-500 flex-1">
         {children}
       </span>
+      {tooltip && <QuestionTooltip text={tooltip} />}
     </div>
   )
 }
@@ -83,7 +85,7 @@ function Seg({ options, value, onChange }) {
           className={
             'flex-1 text-[10px] py-0.5 px-1 transition-colors truncate ' +
             (value === o.value
-              ? 'bg-gray-900 text-white font-semibold'
+              ? 'bg-gray-700 text-white font-semibold'
               : 'bg-white text-gray-600 hover:bg-gray-100')
           }
         >
@@ -111,7 +113,7 @@ function SelectEl({ value, onChange, options }) {
 const opBtnCls = ok =>
   'py-1.5 rounded border text-[10px] font-medium transition-colors ' +
   (ok
-    ? 'border-gray-900 bg-gray-900 text-white hover:bg-gray-700'
+    ? 'border-gray-700 bg-gray-700 text-white hover:bg-gray-600'
     : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed')
 
 function nextRowLetter(row) {
@@ -149,11 +151,11 @@ function AlignSection() {
   const gapValid      = gapStr === '' || (!isNaN(gapValue) && gapValue >= 0)
 
   const plateBtnCls = 'flex-1 py-1.5 rounded border text-[10px] font-medium transition-colors ' +
-    'border-gray-900 bg-gray-900 text-white hover:bg-gray-700'
+    'border-gray-700 bg-gray-700 text-white hover:bg-gray-600'
 
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader>Align &amp; Distribute</SectionHeader>
+      <SectionHeader tooltip="Align the selection to the plate edges or its centre. With multiple wells selected, align them to each other or distribute them with a custom gap. Relative spacing between wells is always preserved.">Align &amp; Distribute</SectionHeader>
       <div className="px-3 py-2.5 space-y-2.5">
 
         {/* Selection count + copy/paste/clear */}
@@ -171,7 +173,7 @@ function AlignSection() {
               <button
                 onClick={pasteWells}
                 title="Paste wells (+5 mm offset)  [Ctrl+V]"
-                className="text-[9px] px-1.5 py-0.5 rounded border border-gray-900 bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+                className="text-[9px] px-1.5 py-0.5 rounded border border-gray-700 bg-gray-700 text-white hover:bg-gray-600 transition-colors"
               >⎘ Paste</button>
             )}
             <button onClick={clearSelection} className="text-[9px] text-gray-400 hover:text-gray-700 transition-colors">
@@ -297,7 +299,7 @@ function WellPropertiesSection() {
 
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader>
+      <SectionHeader tooltip="Physical dimensions and position of the selected well(s). All changes apply to every selected well simultaneously. Depth (Z) must not exceed the plate Height (Z).">
         Well Properties{isMulti && <span className="ml-1 normal-case font-normal text-gray-400">({count} selected)</span>}
       </SectionHeader>
       <div className="px-3 py-2 space-y-1.5">
@@ -331,6 +333,14 @@ function WellPropertiesSection() {
         <Field label="Depth (Z)" unit="mm">
           <NumInput value={firstWell.depth} onChange={v => patch({ depth: v })} onFocus={snapshot} min={0} />
         </Field>
+        {firstWell.depth > labwareConfig.zDimension && (
+          <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-red-50 border border-red-200">
+            <span className="text-red-500 text-[10px] flex-shrink-0 mt-px">✕</span>
+            <span className="text-[10px] text-red-700 leading-snug">
+              Depth ({firstWell.depth} mm) exceeds plate Height (Z = {labwareConfig.zDimension} mm).
+            </span>
+          </div>
+        )}
 
         <Field label="Volume" unit="µL">
           <NumInput value={firstWell.totalLiquidVolume} onChange={v => patch({ totalLiquidVolume: v })} onFocus={snapshot} min={0} step={1} />
@@ -476,7 +486,7 @@ function MeasurementSection() {
 
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader>Measurement</SectionHeader>
+      <SectionHeader tooltip="Centre-to-centre distance between two selected wells, with ΔX and ΔY components. Edit the delta values to precisely reposition the second well relative to the first.">Measurement</SectionHeader>
       <div className="px-3 py-2.5 space-y-2.5">
 
         <div className="flex gap-2 text-[9px]">
@@ -531,7 +541,7 @@ function MeasurementSection() {
   )
 }
 
-// ── Section: Spacing to Neighbor ──────────────────────────────────────────────
+// ── Section: Neighbour Dimensions ─────────────────────────────────────────────
 
 function SpacingSection() {
   const { wellGroups, selectedWells, snapshot, setWellPositions } = useLabwareStore()
@@ -601,7 +611,7 @@ function SpacingSection() {
 
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader>Spacing to Neighbor</SectionHeader>
+      <SectionHeader tooltip="Distance from the selected well's centre to the nearest well in each direction. Use this to verify uniform spacing across a grid layout.">Neighbour Dimensions</SectionHeader>
       <div className="px-3 py-2.5 space-y-3">
 
         <div className="space-y-1">
@@ -718,7 +728,7 @@ function MultiWellsSection() {
 
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader>Place Multiple Wells</SectionHeader>
+      <SectionHeader tooltip="Fill the dragged region with a uniform grid of wells. Rows and columns must each be at least 1. Well properties are inherited from the last selected well.">Place Multiple Wells</SectionHeader>
       <div className="px-3 py-2 space-y-1.5">
 
         <div className="text-[9px] text-gray-400 bg-gray-50 border border-gray-100 rounded px-2 py-1">
@@ -795,7 +805,7 @@ function MultiWellsSection() {
           <button onClick={handleAdd} disabled={!rowsValid || !colsValid}
             className={'flex-1 py-1.5 text-[11px] font-semibold rounded transition-colors ' +
               (rowsValid && colsValid
-                ? 'bg-gray-900 hover:bg-gray-700 text-white'
+                ? 'bg-gray-700 hover:bg-gray-600 text-white'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed')}>
             Add Wells
           </button>
