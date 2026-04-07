@@ -133,7 +133,7 @@ export function Toolbar({ onFitView, onExportPng }) {
         onClick={() => fileInputRef.current?.click()}
         className="flex items-center gap-1.5 px-2 py-1 bg-white hover:bg-gray-100 text-gray-700 text-xs rounded border border-gray-300 transition-colors whitespace-nowrap flex-shrink-0"
       >
-        ↑ Import JSON
+        ↓ Import JSON
       </button>
       <div ref={exportMenuRef} className="relative flex-shrink-0">
         <button
