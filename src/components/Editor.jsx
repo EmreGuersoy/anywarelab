@@ -36,8 +36,6 @@ export function Editor() {
 
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Tool strip */}
-      <Toolbar onFitView={() => setFitSignal(n => n + 1)} onExportPng={() => setExportPngSignal(n => n + 1)} />
 
       {/* Workspace */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -52,6 +50,12 @@ export function Editor() {
 
         {/* Canvas — fills remaining space */}
         <div className="relative z-0 flex-1 min-w-0 overflow-hidden flex flex-col">
+
+          {/* Floating toolbar — centered above canvas */}
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20">
+            <Toolbar onFitView={() => setFitSignal(n => n + 1)} onExportPng={() => setExportPngSignal(n => n + 1)} />
+          </div>
+
           <CanvasView fitSignal={fitSignal} exportPngSignal={exportPngSignal} />
         </div>
 

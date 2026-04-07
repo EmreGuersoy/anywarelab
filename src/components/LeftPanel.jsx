@@ -170,6 +170,31 @@ function PlateSection() {
           </div>
         </div>
 
+        {c.labwareType === 'tipRack' && (
+          <div className="pt-1 border-t border-gray-100 space-y-1.5">
+            <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Tip</div>
+            <Field label="Tip length" unit="mm">
+              <NumInput value={c.tipLength} onChange={v => setConfigField('tipLength', v)} onFocus={snapshot} min={0} step={0.01} />
+            </Field>
+            {c.tipLength === 0 && (
+              <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-red-50 border border-red-200">
+                <span className="text-red-500 text-[10px] flex-shrink-0 mt-px font-bold">✕</span>
+                <span className="text-[10px] text-red-700 leading-snug">
+                  Tip length is required. Enter the physical length of the tip.
+                </span>
+              </div>
+            )}
+            {c.tipLength > c.zDimension && (
+              <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-red-50 border border-red-200">
+                <span className="text-red-500 text-[10px] flex-shrink-0 mt-px font-bold">✕</span>
+                <span className="text-[10px] text-red-700 leading-snug">
+                  Tip length ({c.tipLength} mm) exceeds plate Height (Z = {c.zDimension} mm).
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* TODO: stacking adapter UI
         <div className="pt-1 border-t border-gray-100 space-y-1.5">
           <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Stacking</div>

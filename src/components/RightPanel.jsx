@@ -354,48 +354,52 @@ function WellPropertiesSection() {
       </SectionHeader>
       <div className="px-3 py-2 space-y-1.5">
 
-        <Field label="Shape">
-          <Seg
-            value={firstWell.shape}
-            onChange={v => { snapshot(); patch({ shape: v }) }}
-            options={
-              labwareConfig.labwareType === 'tipRack'
-                ? [{ label: '○ Circular', value: 'circular' }]
-                : [
-                    { label: '○ Circular', value: 'circular'    },
-                    { label: '□ Rect',     value: 'rectangular' },
-                  ]
-            }
-          />
-        </Field>
-
-        {firstWell.shape === 'circular' ? (
-          <Field label="Diameter" unit="mm">
-            <NumInput value={firstWell.diameter} onChange={v => patch({ diameter: v })} onFocus={snapshot} min={0} />
+        {labwareConfig.labwareType === 'tipRack' && (
+          <Field label="Tip diameter" unit="mm">
+            <NumInput value={firstWell.diameter} onChange={v => patch({ diameter: v })} onFocus={snapshot} min={0} step={0.01} />
           </Field>
-        ) : (
-          <>
-            <Field label="Length (X)" unit="mm">
-              <NumInput value={firstWell.xDimension} onChange={v => patch({ xDimension: v })} onFocus={snapshot} min={0} />
-            </Field>
-            <Field label="Width (Y)" unit="mm">
-              <NumInput value={firstWell.yDimension} onChange={v => patch({ yDimension: v })} onFocus={snapshot} min={0} />
-            </Field>
-          </>
         )}
 
-        <Field label={labwareConfig.labwareType === 'tipRack' ? 'Tip height' : 'Depth (Z)'} unit="mm">
-          <NumInput value={firstWell.depth} onChange={v => patch({ depth: v })} onFocus={snapshot} min={0} />
-        </Field>
-        {firstWell.depth > labwareConfig.zDimension && (
-          <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-red-50 border border-red-200">
-            <span className="text-red-500 text-[10px] flex-shrink-0 mt-px">✕</span>
-            <span className="text-[10px] text-red-700 leading-snug">
-              {labwareConfig.labwareType === 'tipRack'
-                ? `Tip height (${firstWell.depth} mm) exceeds plate Height (Z = ${labwareConfig.zDimension} mm).`
-                : `Depth (${firstWell.depth} mm) exceeds plate Height (Z = ${labwareConfig.zDimension} mm).`}
-            </span>
-          </div>
+        {labwareConfig.labwareType !== 'tipRack' && (
+          <>
+            <Field label="Shape">
+              <Seg
+                value={firstWell.shape}
+                onChange={v => { snapshot(); patch({ shape: v }) }}
+                options={[
+                  { label: '○ Circular', value: 'circular'    },
+                  { label: '□ Rect',     value: 'rectangular' },
+                ]}
+              />
+            </Field>
+
+            {firstWell.shape === 'circular' ? (
+              <Field label="Diameter" unit="mm">
+                <NumInput value={firstWell.diameter} onChange={v => patch({ diameter: v })} onFocus={snapshot} min={0} />
+              </Field>
+            ) : (
+              <>
+                <Field label="Length (X)" unit="mm">
+                  <NumInput value={firstWell.xDimension} onChange={v => patch({ xDimension: v })} onFocus={snapshot} min={0} />
+                </Field>
+                <Field label="Width (Y)" unit="mm">
+                  <NumInput value={firstWell.yDimension} onChange={v => patch({ yDimension: v })} onFocus={snapshot} min={0} />
+                </Field>
+              </>
+            )}
+
+            <Field label="Depth (Z)" unit="mm">
+              <NumInput value={firstWell.depth} onChange={v => patch({ depth: v })} onFocus={snapshot} min={0} />
+            </Field>
+            {firstWell.depth > labwareConfig.zDimension && (
+              <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-red-50 border border-red-200">
+                <span className="text-red-500 text-[10px] flex-shrink-0 mt-px">✕</span>
+                <span className="text-[10px] text-red-700 leading-snug">
+                  Depth ({firstWell.depth} mm) exceeds plate Height (Z = {labwareConfig.zDimension} mm).
+                </span>
+              </div>
+            )}
+          </>
         )}
 
         <Field label="Volume">
@@ -418,30 +422,6 @@ function WellPropertiesSection() {
           </select>
         </Field>
 
-        {labwareConfig.labwareType === 'tipRack' && (
-          <>
-            <div className="border-t border-gray-100 pt-1.5">
-              <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Tip Rack</div>
-            </div>
-            <Field label="Tip length" unit="mm">
-              <NumInput
-                value={labwareConfig.tipLength}
-                onChange={v => { snapshot(); setConfigField('tipLength', v) }}
-                onFocus={snapshot}
-                min={0}
-                step={0.01}
-              />
-            </Field>
-            {labwareConfig.tipLength === 0 && (
-              <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-red-50 border border-red-200">
-                <span className="text-red-500 text-[10px] flex-shrink-0 mt-px font-bold">✕</span>
-                <span className="text-[10px] text-red-700 leading-snug">
-                  Tip length is required for tip racks. Enter the length of the tip above the labware surface.
-                </span>
-              </div>
-            )}
-          </>
-        )}
 
         {/* Edge Offsets — anchor-relative when multi-select */}
         <div className="border-t border-gray-100 pt-1.5 space-y-1">
@@ -482,151 +462,7 @@ function WellPropertiesSection() {
   )
 }
 
-// ── Section: Measurement (2 wells selected) ───────────────────────────────────
-
-function MeasurementSection() {
-  const { wellGroups, selectedWells, snapshot, applyRelativeDelta, setWellPositions } = useLabwareStore()
-  const { labelMap, flatWells } = useLabelMap()
-
-  const origTargetRef = useRef({ x: 0, y: 0 })
-
-  const isActive = selectedWells.length === 2
-    && !!selectedWells[0]?.wellId && !!selectedWells[1]?.wellId
-
-  const sel0 = selectedWells[0] ?? null
-  const sel1 = selectedWells[1] ?? null
-
-  const anchor = isActive
-    ? (wellGroups.find(g => g.id === sel0.groupId)?.wells.find(w => w.id === sel0.wellId) ?? null)
-    : null
-  const target = isActive
-    ? (wellGroups.find(g => g.id === sel1.groupId)?.wells.find(w => w.id === sel1.wellId) ?? null)
-    : null
-
-  const selPairKey = isActive ? `${sel0.wellId}::${sel1.wellId}` : ''
-
-  useEffect(() => {
-    if (isActive && target) {
-      origTargetRef.current = { x: target.x, y: target.y }
-    }
-  }, [selPairKey]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!anchor || !target) return null
-
-  const anchorKey   = `${sel0.groupId}::id::${sel0.wellId}`
-  const targetKey   = `${sel1.groupId}::id::${sel1.wellId}`
-  const anchorLabel = labelMap.get(anchorKey) ?? '—'
-  const targetLabel = labelMap.get(targetKey) ?? '—'
-
-  const dx   = target.x - anchor.x
-  const dy   = target.y - anchor.y
-  const dist = Math.sqrt(dx * dx + dy * dy)
-
-  function setDX(newDX) {
-    snapshot()
-    applyRelativeDelta(sel0.groupId, sel0.wellId, sel1.groupId, sel1.wellId, 'x', newDX)
-  }
-  function setDY(newDY) {
-    snapshot()
-    applyRelativeDelta(sel0.groupId, sel0.wellId, sel1.groupId, sel1.wellId, 'y', newDY)
-  }
-
-  function applyDXToRow() {
-    const rowMatch = targetLabel.match(/^([A-Z]+)/)
-    if (!rowMatch) return
-    const rowLetter = rowMatch[1]
-    const shiftX = target.x - origTargetRef.current.x
-    if (Math.abs(shiftX) < 0.001) return
-    const updates = flatWells
-      .filter(fw => fw.label.match(/^([A-Z]+)/)?.[1] === rowLetter && fw.key !== targetKey)
-      .map(fw => { const [gid, wid] = fw.key.split('::id::'); return { groupId: gid, wellId: wid, x: fw.x + shiftX } })
-    snapshot()
-    setWellPositions(updates)
-    origTargetRef.current.x = target.x
-  }
-
-  function applyDYToColumn() {
-    const colMatch = targetLabel.match(/(\d+)$/)
-    if (!colMatch) return
-    const colNum = colMatch[1]
-    const shiftY = target.y - origTargetRef.current.y
-    if (Math.abs(shiftY) < 0.001) return
-    const updates = flatWells
-      .filter(fw => fw.label.match(/(\d+)$/)?.[1] === colNum && fw.key !== targetKey)
-      .map(fw => { const [gid, wid] = fw.key.split('::id::'); return { groupId: gid, wellId: wid, y: fw.y + shiftY } })
-    snapshot()
-    setWellPositions(updates)
-    origTargetRef.current.y = target.y
-  }
-
-  const statRow = (label, value) => (
-    <div className="flex items-center justify-between py-0.5">
-      <span className="text-[10px] text-gray-500 w-[80px] flex-shrink-0">{label}</span>
-      <span className="text-[11px] font-mono font-semibold text-gray-900">{value}</span>
-    </div>
-  )
-
-  const applyBtn = 'mt-1 w-full py-1 text-[10px] font-semibold rounded border border-gray-900 ' +
-    'bg-white text-gray-900 hover:bg-gray-900 hover:text-white transition-colors'
-
-  return (
-    <div className="border-b border-gray-200">
-      <SectionHeader tooltip="Centre-to-centre distance between two selected wells, with ΔX and ΔY components. Edit the delta values to precisely reposition the second well relative to the first.">Measurement</SectionHeader>
-      <div className="px-3 py-2.5 space-y-2.5">
-
-        <div className="flex gap-2 text-[9px]">
-          <div className="flex-1 bg-gray-50 border border-gray-200 rounded px-2 py-1">
-            <div className="text-gray-400 uppercase tracking-widest mb-0.5">Anchor (fixed)</div>
-            <div className="font-bold text-gray-900 text-[11px]">{anchorLabel}</div>
-          </div>
-          <div className="flex-1 bg-gray-50 border border-gray-200 rounded px-2 py-1">
-            <div className="text-gray-400 uppercase tracking-widest mb-0.5">Target (mobile)</div>
-            <div className="font-bold text-gray-900 text-[11px]">{targetLabel}</div>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 border border-gray-200 rounded px-2 py-1.5 space-y-0.5">
-          {statRow('ΔX (horiz.)', `${Math.abs(dx).toFixed(2)} mm`)}
-          {statRow('ΔY (vert.)',  `${Math.abs(dy).toFixed(2)} mm`)}
-          {statRow('Distance',   `${dist.toFixed(2)} mm`)}
-        </div>
-
-        <div className="space-y-1">
-          <div className="text-[9px] uppercase tracking-widest text-gray-400">Set ΔX</div>
-          <Field label="Target X +" unit="mm">
-            <NumInput value={+dx.toFixed(3)} onChange={setDX} onFocus={() => {
-              origTargetRef.current.x = target.x; snapshot()
-            }} step={0.01} />
-          </Field>
-          <div className="text-[9px] text-gray-400">
-            Anchor {anchorLabel} at x={anchor.x.toFixed(2)} → target moves to {(anchor.x + dx).toFixed(2)}
-          </div>
-          <button onClick={applyDXToRow} className={applyBtn}>
-            Apply ΔX shift to Row {targetLabel.match(/^[A-Z]+/)?.[0] ?? ''}
-          </button>
-        </div>
-
-        <div className="space-y-1 border-t border-gray-100 pt-2">
-          <div className="text-[9px] uppercase tracking-widest text-gray-400">Set ΔY</div>
-          <Field label="Target Y +" unit="mm">
-            <NumInput value={+dy.toFixed(3)} onChange={setDY} onFocus={() => {
-              origTargetRef.current.y = target.y; snapshot()
-            }} step={0.01} />
-          </Field>
-          <div className="text-[9px] text-gray-400">
-            Anchor {anchorLabel} at y={anchor.y.toFixed(2)} → target moves to {(anchor.y + dy).toFixed(2)}
-          </div>
-          <button onClick={applyDYToColumn} className={applyBtn}>
-            Apply ΔY shift to Column {targetLabel.match(/\d+$/)?.[0] ?? ''}
-          </button>
-        </div>
-
-      </div>
-    </div>
-  )
-}
-
-// ── Section: Neighbour Dimensions ─────────────────────────────────────────────
+// ── Section: Dimensions ───────────────────────────────────────────────────────
 
 function SpacingSection() {
   const { wellGroups, selectedWells, snapshot, setWellPositions } = useLabwareStore()
@@ -635,7 +471,9 @@ function SpacingSection() {
   const [xPitch, setXPitch] = useState(9)
   const [yPitch, setYPitch] = useState(9)
 
-  const sel       = selectedWells.length === 1 ? selectedWells[0] : null
+  // Use first selected well as reference for neighbour measurement
+  const sel       = selectedWells.length > 0 ? selectedWells[0] : null
+  const isMulti   = selectedWells.length > 1
   const wellKey   = sel?.wellId ? `${sel.groupId}::id::${sel.wellId}` : null
   const label     = wellKey ? (labelMap.get(wellKey) ?? null) : null
   const match     = label ? label.match(/^([A-Z]+)(\d+)$/) : null
@@ -691,12 +529,44 @@ function SpacingSection() {
     setWellPositions(updates)
   }
 
+  function applyXToSelection() {
+    const sorted = [...selectedWells]
+      .map(sw => {
+        const g = wellGroups.find(g => g.id === sw.groupId)
+        const w = g?.wells.find(w => w.id === sw.wellId)
+        return w ? { groupId: sw.groupId, wellId: sw.wellId, x: w.x } : null
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.x - b.x)
+    if (sorted.length < 2) return
+    const anchorX = sorted[0].x
+    const updates = sorted.map((w, i) => ({ groupId: w.groupId, wellId: w.wellId, x: anchorX + i * xPitch }))
+    snapshot()
+    setWellPositions(updates)
+  }
+
+  function applyYToSelection() {
+    const sorted = [...selectedWells]
+      .map(sw => {
+        const g = wellGroups.find(g => g.id === sw.groupId)
+        const w = g?.wells.find(w => w.id === sw.wellId)
+        return w ? { groupId: sw.groupId, wellId: sw.wellId, y: w.y } : null
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.y - a.y)
+    if (sorted.length < 2) return
+    const anchorY = sorted[0].y
+    const updates = sorted.map((w, i) => ({ groupId: w.groupId, wellId: w.wellId, y: anchorY - i * yPitch }))
+    snapshot()
+    setWellPositions(updates)
+  }
+
   const applyBtn = 'w-full py-1 text-[10px] font-semibold rounded border border-gray-900 ' +
     'bg-white text-gray-900 hover:bg-gray-900 hover:text-white transition-colors'
 
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader tooltip="Distance from the selected well's centre to the nearest well in each direction. Use this to verify uniform spacing across a grid layout.">Neighbour Dimensions</SectionHeader>
+      <SectionHeader tooltip="Distance from the selected well's centre to the nearest well in each direction. Use this to verify uniform spacing across a grid layout.">Dimensions</SectionHeader>
       <div className="px-3 py-2.5 space-y-3">
 
         <div className="space-y-1">
@@ -713,9 +583,16 @@ function SpacingSection() {
               </div>
             : <div className="text-[9px] text-gray-400 italic">No right neighbour in row {rowLetter}</div>
           }
-          <button onClick={applyToRow} className={applyBtn}>
-            Apply uniform X to Row {rowLetter}
-          </button>
+          <div className={isMulti ? 'grid grid-cols-2 gap-1' : ''}>
+            <button onClick={applyToRow} className={applyBtn}>
+              Apply X to Row {rowLetter}
+            </button>
+            {isMulti && (
+              <button onClick={applyXToSelection} className={applyBtn}>
+                Apply X to selection
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="space-y-1 border-t border-gray-100 pt-2.5">
@@ -732,9 +609,16 @@ function SpacingSection() {
               </div>
             : <div className="text-[9px] text-gray-400 italic">No well below in column {colNum}</div>
           }
-          <button onClick={applyToColumn} className={applyBtn}>
-            Apply uniform Y to Column {colNum}
-          </button>
+          <div className={isMulti ? 'grid grid-cols-2 gap-1' : ''}>
+            <button onClick={applyToColumn} className={applyBtn}>
+              Apply Y to Column {colNum}
+            </button>
+            {isMulti && (
+              <button onClick={applyYToSelection} className={applyBtn}>
+                Apply Y to selection
+              </button>
+            )}
+          </div>
         </div>
 
       </div>
@@ -918,7 +802,6 @@ export function RightPanel() {
           <GroupSection />
           <AlignSection />
           <WellPropertiesSection />
-          <MeasurementSection />
           <SpacingSection />
         </>
       )}

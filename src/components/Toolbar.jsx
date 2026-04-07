@@ -68,7 +68,7 @@ export function Toolbar({ onFitView, onExportPng }) {
   }, [setActiveTool])
 
   return (
-    <div className="flex items-center gap-px px-3 py-1.5 bg-white border-b border-gray-200 flex-shrink-0 flex-wrap">
+    <div className="flex items-center gap-px px-3 py-1.5 bg-white rounded-xl shadow-lg border border-gray-200 flex-nowrap">
 
       {/* ── Cursor tools ── */}
       <ToolGroup>
@@ -97,7 +97,7 @@ export function Toolbar({ onFitView, onExportPng }) {
         </button>
       </ToolGroup>
 
-      <div className="flex-1" />
+      <Divider />
 
       {/* ── Undo / Redo ── */}
       <ToolGroup>
@@ -131,16 +131,16 @@ export function Toolbar({ onFitView, onExportPng }) {
       />
       <button
         onClick={() => fileInputRef.current?.click()}
-        className="flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-gray-100 text-gray-700 text-xs font-semibold rounded border border-gray-300 transition-colors mr-1"
+        className="flex items-center gap-1.5 px-2 py-1 bg-white hover:bg-gray-100 text-gray-700 text-xs rounded border border-gray-300 transition-colors whitespace-nowrap flex-shrink-0"
       >
         ↑ Import JSON
       </button>
-      <div ref={exportMenuRef} className="relative">
+      <div ref={exportMenuRef} className="relative flex-shrink-0">
         <button
           onClick={() => setExportOpen(v => !v)}
-          className="flex items-center gap-1.5 px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs font-semibold rounded transition-colors"
+          className="flex items-center gap-1.5 px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded transition-colors whitespace-nowrap"
         >
-          ↓ Export ▾
+          ↑ Export ▾
         </button>
         {exportOpen && (
           <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[130px] overflow-hidden">
@@ -156,13 +156,13 @@ export function Toolbar({ onFitView, onExportPng }) {
               }}
               className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 transition-colors border-b border-gray-100"
             >
-              ↓ JSON file
+              ↑ JSON file
             </button>
             <button
               onClick={() => { onExportPng(); setExportOpen(false) }}
               className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
             >
-              ↓ PNG image
+              ↑ PNG image
             </button>
           </div>
         )}

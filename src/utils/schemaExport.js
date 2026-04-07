@@ -14,6 +14,7 @@ const LABWARE_TYPE_TO_CATEGORY = {
   wellPlate:     'wellPlate',
   reservoir:     'reservoir',
   tubeRack:      'tubeRack',
+  tipRack:       'tipRack',
   aluminumBlock: 'aluminumBlock',
 }
 
@@ -39,13 +40,15 @@ export function buildOpentronSchema(labwareConfig, wellGroups) {
       const lbl = labelMap.get(key)
       if (!lbl) return
 
+      const isTipRack  = labwareType === 'tipRack'
+      const wellDepth  = isTipRack ? (tipLength ?? 0) : w.depth
       const def = {
-        depth:             w.depth,
+        depth:             wellDepth,
         totalLiquidVolume: w.totalLiquidVolume,
         shape:             w.shape,
         x: round2(w.x),
         y: round2(w.y),
-        z: round2(Math.max(0, zDimension - w.depth)),
+        z: round2(Math.max(0, zDimension - wellDepth)),
       }
       if (w.shape === 'circular') {
         def.diameter = w.diameter
@@ -57,11 +60,11 @@ export function buildOpentronSchema(labwareConfig, wellGroups) {
       groupWellNames.push(lbl)
     })
 
-    // Use the first well's bottomShape for the group metadata (Opentrons v2 requirement)
-    const bottomShape = group.wells[0]?.bottomShape ?? 'flat'
+    const isTipRackGroup = labwareType === 'tipRack'
+    const bottomShape    = group.wells[0]?.bottomShape ?? 'flat'
 
     groups.push({
-      metadata: {
+      metadata: isTipRackGroup ? {} : {
         wellBottomShape: bottomShape,
         displayName:     group.name,
       },
