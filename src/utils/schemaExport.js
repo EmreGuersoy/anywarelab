@@ -23,6 +23,7 @@ export function buildOpentronSchema(labwareConfig, wellGroups) {
   const {
     xDimension, yDimension, zDimension,
     displayName, brand, loadName, labwareType,
+    tipLength,
   } = labwareConfig
 
   const { labelMap, ordering } = generateOpentronsLabels(wellGroups, yDimension)
@@ -89,9 +90,10 @@ export function buildOpentronSchema(labwareConfig, wellGroups) {
     parameters: {
       format:                     'irregular',
       quirks:                     [],
-      isTiprack:                  false,
+      isTiprack:                  labwareType === 'tipRack',
       isMagneticModuleCompatible: false,
       loadName:                   safeLoadName,
+      ...(labwareType === 'tipRack' && { tipLength: tipLength ?? 0 }),
     },
     namespace:            'custom_beta',
     version:              1,

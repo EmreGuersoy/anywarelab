@@ -68,6 +68,7 @@ export const useLabwareStore = create(
       displayName: 'Custom Labware',
       brand:       'Generic',
       loadName:    'custom_labware_1',
+      tipLength:   0,
       // TODO: stacking adapter support
       // stackingAdapter: false,
       // stackingOffsetX: 0,

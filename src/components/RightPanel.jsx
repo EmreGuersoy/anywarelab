@@ -131,9 +131,10 @@ function nextRowLetter(row) {
 // ── Section: Group Settings ────────────────────────────────────────────────────
 
 function GroupSection() {
-  const { wellGroups, selectedWells, snapshot, updateGroupWells } = useLabwareStore()
+  const { wellGroups, selectedWells, snapshot, updateGroupWells, labwareConfig } = useLabwareStore()
 
   if (selectedWells.length === 0) return null
+  if (labwareConfig.labwareType === 'tipRack') return null
 
   const firstSel = selectedWells[0]
   const group = wellGroups.find(g => g.id === firstSel.groupId)
@@ -295,12 +296,15 @@ function WellPropertiesSection() {
   const {
     wellGroups, selectedWells,
     updateSelectedWells, moveSelectedWells,
-    labwareConfig, snapshot,
+    labwareConfig, setConfigField, snapshot,
   } = useLabwareStore()
   const { labelMap } = useLabelMap()
 
   // Anchor index: which selected well the edge-offset inputs reference
   const [anchorIdx, setAnchorIdx] = useState(0)
+
+  // Volume display unit — internally always stored in µL
+  const [volumeUnit, setVolumeUnit] = useState('uL')
 
   // Reset anchor when the selection identity changes
   const selFingerprint = selectedWells.map(w => w.wellId).join(',')
@@ -354,10 +358,14 @@ function WellPropertiesSection() {
           <Seg
             value={firstWell.shape}
             onChange={v => { snapshot(); patch({ shape: v }) }}
-            options={[
-              { label: '○ Circular',  value: 'circular'     },
-              { label: '□ Rect',      value: 'rectangular'  },
-            ]}
+            options={
+              labwareConfig.labwareType === 'tipRack'
+                ? [{ label: '○ Circular', value: 'circular' }]
+                : [
+                    { label: '○ Circular', value: 'circular'    },
+                    { label: '□ Rect',     value: 'rectangular' },
+                  ]
+            }
           />
         </Field>
 
@@ -376,21 +384,64 @@ function WellPropertiesSection() {
           </>
         )}
 
-        <Field label="Depth (Z)" unit="mm">
+        <Field label={labwareConfig.labwareType === 'tipRack' ? 'Tip height' : 'Depth (Z)'} unit="mm">
           <NumInput value={firstWell.depth} onChange={v => patch({ depth: v })} onFocus={snapshot} min={0} />
         </Field>
         {firstWell.depth > labwareConfig.zDimension && (
           <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-red-50 border border-red-200">
             <span className="text-red-500 text-[10px] flex-shrink-0 mt-px">✕</span>
             <span className="text-[10px] text-red-700 leading-snug">
-              Depth ({firstWell.depth} mm) exceeds plate Height (Z = {labwareConfig.zDimension} mm).
+              {labwareConfig.labwareType === 'tipRack'
+                ? `Tip height (${firstWell.depth} mm) exceeds plate Height (Z = ${labwareConfig.zDimension} mm).`
+                : `Depth (${firstWell.depth} mm) exceeds plate Height (Z = ${labwareConfig.zDimension} mm).`}
             </span>
           </div>
         )}
 
-        <Field label="Volume" unit="µL">
-          <NumInput value={firstWell.totalLiquidVolume} onChange={v => patch({ totalLiquidVolume: v })} onFocus={snapshot} min={0} step={1} />
+        <Field label="Volume">
+          <NumInput
+            value={volumeUnit === 'mL'
+              ? +( firstWell.totalLiquidVolume / 1000).toFixed(6)
+              : firstWell.totalLiquidVolume}
+            onChange={v => patch({ totalLiquidVolume: volumeUnit === 'mL' ? v * 1000 : v })}
+            onFocus={snapshot}
+            min={0}
+            step={volumeUnit === 'mL' ? 0.001 : 1}
+          />
+          <select
+            value={volumeUnit}
+            onChange={e => setVolumeUnit(e.target.value)}
+            className="flex-shrink-0 text-[10px] text-gray-600 bg-white border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:border-blue-500 cursor-pointer"
+          >
+            <option value="uL">µL</option>
+            <option value="mL">mL</option>
+          </select>
         </Field>
+
+        {labwareConfig.labwareType === 'tipRack' && (
+          <>
+            <div className="border-t border-gray-100 pt-1.5">
+              <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Tip Rack</div>
+            </div>
+            <Field label="Tip length" unit="mm">
+              <NumInput
+                value={labwareConfig.tipLength}
+                onChange={v => { snapshot(); setConfigField('tipLength', v) }}
+                onFocus={snapshot}
+                min={0}
+                step={0.01}
+              />
+            </Field>
+            {labwareConfig.tipLength === 0 && (
+              <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-red-50 border border-red-200">
+                <span className="text-red-500 text-[10px] flex-shrink-0 mt-px font-bold">✕</span>
+                <span className="text-[10px] text-red-700 leading-snug">
+                  Tip length is required for tip racks. Enter the length of the tip above the labware surface.
+                </span>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Edge Offsets — anchor-relative when multi-select */}
         <div className="border-t border-gray-100 pt-1.5 space-y-1">
