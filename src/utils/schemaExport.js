@@ -97,6 +97,10 @@ export function buildOpentronSchema(labwareConfig, wellGroups) {
     version:              1,
     schemaVersion:        2,
     cornerOffsetFromSlot: { x: 0, y: 0, z: 0 },
+    // TODO: stacking adapter export
+    // ...(stackingAdapter && {
+    //   stackingOffsetWithLabware: { x: stackingOffsetX ?? 0, y: stackingOffsetY ?? 0, z: stackingOffsetZ ?? 0 },
+    // }),
   }
 }
 

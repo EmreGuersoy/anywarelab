@@ -128,6 +128,52 @@ function nextRowLetter(row) {
   return chars.join('')
 }
 
+// ── Section: Group Settings ────────────────────────────────────────────────────
+
+function GroupSection() {
+  const { wellGroups, selectedWells, snapshot, updateGroupWells } = useLabwareStore()
+
+  if (selectedWells.length === 0) return null
+
+  const firstSel = selectedWells[0]
+  const group = wellGroups.find(g => g.id === firstSel.groupId)
+  if (!group) return null
+
+  const bottomShape = group.wells[0]?.bottomShape ?? 'flat'
+
+  function setBottomShape(shape) {
+    snapshot()
+    updateGroupWells(group.id, { bottomShape: shape })
+  }
+
+  return (
+    <div className="border-b border-gray-200">
+      <SectionHeader tooltip="Settings that apply to all wells in this group. Bottom shape is shared across the group and is used when exporting the Opentrons JSON.">Group Settings</SectionHeader>
+      <div className="px-3 py-2 space-y-1.5">
+
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold text-gray-900 truncate">{group.name}</div>
+          <div className="text-[9px] text-gray-400">{group.wells.length} well{group.wells.length !== 1 ? 's' : ''}</div>
+        </div>
+
+        <Field label="Bottom">
+          <SelectEl
+            value={bottomShape}
+            onChange={setBottomShape}
+            options={[
+              { label: 'Flat',     value: 'flat' },
+              { label: 'U-bottom', value: 'u'    },
+              { label: 'V-bottom', value: 'v'    },
+            ]}
+          />
+        </Field>
+        <div className="text-[9px] text-gray-400">Applies to all {group.wells.length} wells in this group.</div>
+
+      </div>
+    </div>
+  )
+}
+
 // ── Section: Align & Distribute ───────────────────────────────────────────────
 
 function AlignSection() {
@@ -344,18 +390,6 @@ function WellPropertiesSection() {
 
         <Field label="Volume" unit="µL">
           <NumInput value={firstWell.totalLiquidVolume} onChange={v => patch({ totalLiquidVolume: v })} onFocus={snapshot} min={0} step={1} />
-        </Field>
-
-        <Field label="Bottom">
-          <SelectEl
-            value={firstWell.bottomShape}
-            onChange={v => { snapshot(); patch({ bottomShape: v }) }}
-            options={[
-              { label: 'Flat',     value: 'flat' },
-              { label: 'U-bottom', value: 'u'    },
-              { label: 'V-bottom', value: 'v'    },
-            ]}
-          />
         </Field>
 
         {/* Edge Offsets — anchor-relative when multi-select */}
@@ -830,6 +864,7 @@ export function RightPanel() {
       {pendingMultiWells && <MultiWellsSection />}
       {!pendingMultiWells && selectedWells.length > 0 && (
         <>
+          <GroupSection />
           <AlignSection />
           <WellPropertiesSection />
           <MeasurementSection />

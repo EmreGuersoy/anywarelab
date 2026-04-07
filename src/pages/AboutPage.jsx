@@ -4,19 +4,28 @@ export default function AboutPage() {
       <div className="max-w-2xl mx-auto px-6 py-10">
 
         <h1 className="text-2xl font-bold text-gray-900 mb-1">About</h1>
-        <p className="text-sm text-gray-500 mb-8">
-          Opentrons Custom Labware Designer
-        </p>
+  
 
         <div className="space-y-6">
 
           <section className="bg-white rounded-lg border border-gray-200 p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-3">What is this tool?</h2>
             <p className="text-sm text-gray-600 leading-relaxed">
-              The Opentrons Custom Labware Designer is a browser-based editor for creating and editing
-              custom labware definitions compatible with the Opentrons robot software. Design well plates,
-              reservoirs, tube racks, and tip racks visually, then export them as Opentrons Labware Schema v2
-              JSON files ready to upload to your robot.
+              Anywarelab is a dedicated web-based editor for the Opentrons community. 
+              It allows for the intuitive design of custom well plates, reservoirs, 
+              and racks through a visual modeling interface. Whether your layout is a standard grid or a specialized irregular configuration, 
+              AnywareLab generates validated Opentrons Schema v2 JSON files instantly, 
+              removing the need for manual coding and reducing the risk of dimensional errors.
+            </p>
+          </section>
+
+          <section className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Who should you use this tool?</h2>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Anywarelab is an assisstant tool for scientists, researchers, and lab technicians who use Opentrons liquid handling robots. It is ideal for those
+              who want to create custom labware that is not available in the standard Opentrons library, or who need to design complex layouts that are difficult to code manually.
+              By providing a visual interface and real-time feedback, Anywarelab makes it easier to design, validate, and export custom labware definitions, 
+              ultimately saving time and reducing errors in the lab.
             </p>
           </section>
 

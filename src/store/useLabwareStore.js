@@ -68,6 +68,11 @@ export const useLabwareStore = create(
       displayName: 'Custom Labware',
       brand:       'Generic',
       loadName:    'custom_labware_1',
+      // TODO: stacking adapter support
+      // stackingAdapter: false,
+      // stackingOffsetX: 0,
+      // stackingOffsetY: 0,
+      // stackingOffsetZ: 0,
     },
 
     // ── Well groups ───────────────────────────────────────────────────────────
@@ -219,6 +224,14 @@ export const useLabwareStore = create(
         if (!g) return
         const w = g.wells.find(w => w.id === wellId)
         if (w) Object.assign(w, patch)
+      }),
+
+    /** Update every well in a group (used by group-wide settings). */
+    updateGroupWells: (groupId, patch) =>
+      set(s => {
+        const g = s.wellGroups.find(g => g.id === groupId)
+        if (!g) return
+        g.wells.forEach(w => Object.assign(w, patch))
       }),
 
     /** Bulk-update every selected well's properties (shared property editor). */

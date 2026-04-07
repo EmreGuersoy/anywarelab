@@ -397,9 +397,11 @@ function EmptyStateOverlay({ wellGroups, plateX, plateY, plateW, plateH, zoom })
   const cy = plateY + plateH / 2
 
   const steps = [
-    { n: '1', text: 'Choose a labware type in the left panel' },
-    { n: '2', text: 'Set the plate dimensions (Length, Width, Height)' },
-    { n: '3', text: 'Use Add Well or Add Grid to place wells' },
+    { n: '1', text: 'Select a labware type from the left panel.' },
+    { n: '2', text: 'Define the footprint dimensions.' },
+    { n: '3', text: 'Use "Add Well/Tip/Tube" or "Add Grid" to place them.' },
+    { n: '4', text: 'Select a well, tip, or tube to edit its properties in the right panel.' },
+    { n: '5', text: 'Export your design as a JSON file.' },
   ]
 
   // Scale font/size with zoom so it stays legible but not overwhelming

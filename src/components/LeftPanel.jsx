@@ -132,7 +132,7 @@ function PlateSection() {
   const c = labwareConfig
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader tooltip="Physical dimensions of the labware footprint. The SBS standard (127.76 × 85.48 mm) fits all standard Opentrons deck positions. Height (Z) is the total height from the deck surface to the top of the labware.">Plate</SectionHeader>
+      <SectionHeader tooltip="The physical dimensions of your labware. To fit a standard Opentrons deck position, the footprint should follow the SBS standard (127.76 x 85.48 mm ± 1.0). The Height (Z) represents the total distance from the deck surface to the highest point of the labware.">Plate</SectionHeader>
       <div className="px-3 py-2 space-y-1">
         <Field label="Display name">
           <TxtInput value={c.displayName} onChange={v => setConfigField('displayName', v)} />
@@ -161,6 +161,38 @@ function PlateSection() {
             Z = total labware height from deck surface
           </div>
         </div>
+
+        {/* TODO: stacking adapter UI
+        <div className="pt-1 border-t border-gray-100 space-y-1.5">
+          <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Stacking</div>
+          <Field label="Stacking adapter">
+            <select
+              value={c.stackingAdapter ? 'yes' : 'no'}
+              onChange={e => setConfigField('stackingAdapter', e.target.value === 'yes')}
+              className={inp + ' cursor-pointer'}
+            >
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </Field>
+          {c.stackingAdapter && (
+            <>
+              <div className="text-[9px] text-gray-400 leading-snug">
+                Offset applied when this labware is stacked on top of another.
+              </div>
+              <Field label="Offset X" unit="mm">
+                <NumInput value={c.stackingOffsetX} onChange={v => setConfigField('stackingOffsetX', v)} onFocus={snapshot} step={0.01} />
+              </Field>
+              <Field label="Offset Y" unit="mm">
+                <NumInput value={c.stackingOffsetY} onChange={v => setConfigField('stackingOffsetY', v)} onFocus={snapshot} step={0.01} />
+              </Field>
+              <Field label="Offset Z" unit="mm">
+                <NumInput value={c.stackingOffsetZ} onChange={v => setConfigField('stackingOffsetZ', v)} onFocus={snapshot} min={0} step={0.01} />
+              </Field>
+            </>
+          )}
+        </div>
+        */}
       </div>
     </div>
   )
@@ -179,7 +211,7 @@ function ToolsSection() {
 
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader tooltip="Place items on your labware. Use the single tool to click and place one at a time, or the grid tool to drag a region and fill it with a uniform array. Items can be repositioned after placement using the Select tool.">Add Wells</SectionHeader>
+      <SectionHeader tooltip="Use the Add Well/Tip/Tube to place items individually, or the Grid Tool to click and drag a uniform array across a region. Need to make a change? Use the Select Tool to move or fine-tune dimensions after placement.">Add Wells</SectionHeader>
       <div className="px-3 py-2 space-y-1.5">
         {tools.map(t => {
           const active = activeTool === t.id
@@ -212,47 +244,112 @@ function ToolsSection() {
 // ── Section: Groups ───────────────────────────────────────────────────────────
 
 function GroupsSection() {
-  const { wellGroups, selectedGroupId, selectGroup, removeWellGroup, addWellGroup, updateGroup } =
-    useLabwareStore()
+  const {
+    wellGroups, selectedGroupId, selectGroup, removeWellGroup, addWellGroup, updateGroup,
+    setSelectedWells,
+  } = useLabwareStore()
+
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+
+  function handleSelectAll(e, g) {
+    e.stopPropagation()
+    selectGroup(g.id)
+    setSelectedWells(g.wells.map(w => ({ groupId: g.id, name: '', wellId: w.id })))
+  }
+
+  function handleDeleteClick(e, id) {
+    e.stopPropagation()
+    setConfirmDeleteId(id)
+  }
+
+  function confirmDelete(e, id) {
+    e.stopPropagation()
+    removeWellGroup(id)
+    setConfirmDeleteId(null)
+  }
+
+  function cancelDelete(e) {
+    e.stopPropagation()
+    setConfirmDeleteId(null)
+  }
 
   return (
     <div className="border-b border-gray-200">
       <SectionHeader tooltip="Wells are organised into named groups. Each group carries a shared bottom shape in the exported JSON. Use multiple groups to distinguish different regions of your labware, such as sample wells vs. controls.">Well Groups</SectionHeader>
       <div className="px-3 py-2 space-y-1">
         {wellGroups.map(g => {
-          const isSelected = selectedGroupId === g.id
+          const isSelected   = selectedGroupId === g.id
+          const isConfirming = confirmDeleteId === g.id
           return (
-            <div
-              key={g.id}
-              onClick={() => selectGroup(g.id)}
-              className={
-                'flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer transition-all ' +
-                (isSelected
-                  ? 'border-gray-900 bg-gray-50'
-                  : 'border-transparent hover:border-gray-200 hover:bg-gray-50')
-              }
-            >
-              <div className="w-2 h-2 rounded-full flex-shrink-0 bg-gray-500" />
-              <div className="flex-1 min-w-0">
-                {isSelected ? (
-                  <input
-                    type="text"
-                    className="text-[11px] font-medium text-gray-800 bg-transparent w-full focus:outline-none border-b border-gray-300 focus:border-blue-500"
-                    value={g.name}
-                    onClick={e => e.stopPropagation()}
-                    onChange={e => updateGroup(g.id, { name: e.target.value })}
-                  />
-                ) : (
-                  <div className="text-[11px] text-gray-700 font-medium truncate">{g.name}</div>
-                )}
-                <div className="text-[9px] text-gray-400">{g.wells.length} wells</div>
-              </div>
-              {isSelected && (
+            <div key={g.id}>
+              <div
+                onClick={() => selectGroup(g.id)}
+                className={
+                  'flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer transition-all ' +
+                  (isSelected
+                    ? 'border-gray-900 bg-gray-50'
+                    : 'border-transparent hover:border-gray-200 hover:bg-gray-50')
+                }
+              >
+                <div className="w-2 h-2 rounded-full flex-shrink-0 bg-gray-500" />
+                <div className="flex-1 min-w-0">
+                  {isSelected ? (
+                    <input
+                      type="text"
+                      className="text-[11px] font-medium text-gray-800 bg-transparent w-full focus:outline-none border-b border-gray-300 focus:border-blue-500"
+                      value={g.name}
+                      onClick={e => e.stopPropagation()}
+                      onChange={e => updateGroup(g.id, { name: e.target.value })}
+                    />
+                  ) : (
+                    <div className="text-[11px] text-gray-700 font-medium truncate">{g.name}</div>
+                  )}
+                  <div className="text-[9px] text-gray-400">{g.wells.length} wells</div>
+                </div>
+
+                {/* Select all */}
                 <button
-                  onClick={e => { e.stopPropagation(); removeWellGroup(g.id) }}
-                  className="text-gray-400 hover:text-red-500 text-xs px-0.5 transition-colors flex-shrink-0"
-                  title="Remove group"
-                >✕</button>
+                  onClick={e => handleSelectAll(e, g)}
+                  title="Select all wells in this group"
+                  className="flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded border border-gray-300 text-gray-500 hover:border-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+                >
+                  All
+                </button>
+
+                {/* Delete */}
+                <button
+                  onClick={e => handleDeleteClick(e, g.id)}
+                  title="Delete group"
+                  className="flex-shrink-0 text-gray-400 hover:text-red-500 text-xs px-0.5 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Inline delete confirmation */}
+              {isConfirming && (
+                <div
+                  className="mx-2 mt-0.5 mb-1 px-2 py-1.5 rounded border border-red-200 bg-red-50 flex items-center justify-between gap-2"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <span className="text-[10px] text-red-700 leading-snug">
+                    Delete <span className="font-semibold">{g.name}</span> and its {g.wells.length} well{g.wells.length !== 1 ? 's' : ''}?
+                  </span>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <button
+                      onClick={e => confirmDelete(e, g.id)}
+                      className="px-2 py-0.5 text-[10px] font-semibold rounded bg-red-600 text-white hover:bg-red-700 transition-colors"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={cancelDelete}
+                      className="px-2 py-0.5 text-[10px] rounded border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           )
