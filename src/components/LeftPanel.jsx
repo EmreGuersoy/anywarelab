@@ -140,6 +140,14 @@ function PlateSection() {
         <Field label="Load name">
           <TxtInput value={c.loadName} onChange={v => setConfigField('loadName', v)} />
         </Field>
+        {/[A-Z\s]/.test(c.loadName) && (
+          <div className="flex items-start gap-1.5 px-2 py-1.5 rounded bg-red-50 border border-red-200">
+            <span className="text-red-500 text-[10px] flex-shrink-0 mt-px font-bold">✕</span>
+            <span className="text-[10px] text-red-700 leading-snug">
+              Load name must be lowercase and contain no spaces. Use underscores instead (e.g. <span className="font-mono">my_labware_1</span>).
+            </span>
+          </div>
+        )}
         <Field label="Brand">
           <TxtInput value={c.brand} onChange={v => setConfigField('brand', v)} />
         </Field>
