@@ -1,8 +1,8 @@
 site_name: Anywarelab
 site_description: Browser-based custom labware designer for the Opentrons platform
 site_url: https://anywarelab.readthedocs.io
-repo_url: https://github.com/EmreGuersoy/OT_anyware
-repo_name: EmreGuersoy/OT_anyware
+repo_url: https://github.com/EmreGuersoy/anywarelab
+repo_name: EmreGuersoy/anywarelab
 edit_uri: edit/main/docs/
 
 theme:
@@ -76,4 +76,4 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/EmreGuersoy/OT_anyware
+      link: https://github.com/EmreGuersoy/anywarelab
