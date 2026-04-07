@@ -34,8 +34,8 @@ While we recommend using our official web domain (coming soon), you can easily r
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/<your-username>/ot2-labware-designer.git
-    cd ot2-labware-designer
+    git clone https://github.com/<your-username>/anywarelab.git
+    cd anywarelab
     ```
 
 2.  **Install dependencies:**
