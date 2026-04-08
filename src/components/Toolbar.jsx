@@ -14,7 +14,7 @@ const TOOLS = [
   { id: 'erase',  label: 'Erase',  icon: '✕', key: 'e', tip: 'Click a well to delete  [E]' },
 ]
 
-export function Toolbar({ onFitView, onExportPng }) {
+export function Toolbar({ onFitView, onExportPng, onExportSvg }) {
   const {
     activeTool, setActiveTool,
     labwareConfig, wellGroups,
@@ -157,6 +157,12 @@ export function Toolbar({ onFitView, onExportPng }) {
               className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 transition-colors border-b border-gray-100"
             >
               ↑ JSON file
+            </button>
+            <button
+              onClick={() => { onExportSvg(); setExportOpen(false) }}
+              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 transition-colors border-b border-gray-100"
+            >
+              ↑ SVG image
             </button>
             <button
               onClick={() => { onExportPng(); setExportOpen(false) }}

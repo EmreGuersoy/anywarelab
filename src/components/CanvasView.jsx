@@ -530,7 +530,7 @@ function StatusBar({ zoom, xDim, yDim, activeTool, selCount }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function CanvasView({ fitSignal, exportPngSignal }) {
+export function CanvasView({ fitSignal, exportPngSignal, exportSvgSignal }) {
   const containerRef = useRef()
   const svgRef       = useRef()
   const panRef       = useRef(null)
@@ -609,14 +609,11 @@ export function CanvasView({ fitSignal, exportPngSignal }) {
   // ── Fit to screen ───────────────────────────────────────────────────────────
   useEffect(() => { setZoom(1); setPan({ x: 0, y: 0 }) }, [fitSignal])
 
-  // ── Export PNG ──────────────────────────────────────────────────────────────
-  // Builds a clean SVG with only the plate + wells (no grid, annotations, etc.)
-  useEffect(() => {
-    if (!exportPngSignal) return
-
-    const PX_PER_MM = 6          // export resolution: 6 px per mm
-    const PAD       = 24         // white padding around plate in px
-    const SW        = 1.5        // stroke width (px)
+  // ── Shared SVG builder ───────────────────────────────────────────────────────
+  function buildExportSvg() {
+    const PX_PER_MM = 6
+    const PAD       = 24
+    const SW        = 1.5
 
     const W = xDim * PX_PER_MM + PAD * 2
     const H = yDim * PX_PER_MM + PAD * 2
@@ -624,7 +621,6 @@ export function CanvasView({ fitSignal, exportPngSignal }) {
     const toX = ox =>  PAD + ox * PX_PER_MM
     const toY = oy =>  PAD + (yDim - oy) * PX_PER_MM
 
-    // Build well elements
     const wellParts = wellGroups.flatMap(group =>
       group.wells.map(w => {
         const cx    = toX(w.x)
@@ -632,8 +628,8 @@ export function CanvasView({ fitSignal, exportPngSignal }) {
         const key   = `${group.id}::id::${w.id}`
         const label = labelMap?.get(key) ?? ''
 
-        const minDim   = w.shape === 'circular' ? w.diameter : Math.min(w.xDimension, w.yDimension)
-        const fontSize = Math.min(Math.max(minDim * PX_PER_MM * 0.32, 4), 11)
+        const minDim    = w.shape === 'circular' ? w.diameter : Math.min(w.xDimension, w.yDimension)
+        const fontSize  = Math.min(Math.max(minDim * PX_PER_MM * 0.32, 4), 11)
         const showLabel = minDim * PX_PER_MM >= 10
 
         const textEl = showLabel && label
@@ -650,14 +646,36 @@ export function CanvasView({ fitSignal, exportPngSignal }) {
       })
     )
 
-    const svgStr = [
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
-      `<rect width="${W}" height="${H}" fill="#ffffff"/>`,
-      `<rect x="${PAD}" y="${PAD}" width="${xDim * PX_PER_MM}" height="${yDim * PX_PER_MM}" rx="4" fill="#ffffff" stroke="#111827" stroke-width="${SW}"/>`,
-      ...wellParts,
-      `</svg>`,
-    ].join('\n')
+    return {
+      svgStr: [
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
+        `<rect width="${W}" height="${H}" fill="#ffffff"/>`,
+        `<rect x="${PAD}" y="${PAD}" width="${xDim * PX_PER_MM}" height="${yDim * PX_PER_MM}" rx="4" fill="#ffffff" stroke="#111827" stroke-width="${SW}"/>`,
+        ...wellParts,
+        `</svg>`,
+      ].join('\n'),
+      W, H,
+    }
+  }
 
+  // ── Export SVG ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!exportSvgSignal) return
+    const { svgStr } = buildExportSvg()
+    const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' })
+    const a    = document.createElement('a')
+    a.href     = URL.createObjectURL(blob)
+    a.download = `${labwareConfig.loadName || 'labware_design'}.svg`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(a.href)
+  }, [exportSvgSignal]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Export PNG ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!exportPngSignal) return
+    const { svgStr, W, H } = buildExportSvg()
     const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' })
     const url  = URL.createObjectURL(blob)
     const img  = new Image()

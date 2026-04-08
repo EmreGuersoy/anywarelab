@@ -8,6 +8,7 @@ import { useLabwareStore } from '../store/useLabwareStore'
 export function Editor() {
   const [fitSignal,       setFitSignal]       = useState(0)
   const [exportPngSignal, setExportPngSignal] = useState(0)
+  const [exportSvgSignal, setExportSvgSignal] = useState(0)
   const { undo, redo, snapshot, removeSelectedWells, selectedWells, pendingMultiWells,
           copySelectedWells, pasteWells } = useLabwareStore()
 
@@ -53,10 +54,10 @@ export function Editor() {
 
           {/* Floating toolbar — centered above canvas */}
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20">
-            <Toolbar onFitView={() => setFitSignal(n => n + 1)} onExportPng={() => setExportPngSignal(n => n + 1)} />
+            <Toolbar onFitView={() => setFitSignal(n => n + 1)} onExportPng={() => setExportPngSignal(n => n + 1)} onExportSvg={() => setExportSvgSignal(n => n + 1)} />
           </div>
 
-          <CanvasView fitSignal={fitSignal} exportPngSignal={exportPngSignal} />
+          <CanvasView fitSignal={fitSignal} exportPngSignal={exportPngSignal} exportSvgSignal={exportSvgSignal} />
         </div>
 
         {/* Right sidebar — selection properties, shown when wells are selected */}
