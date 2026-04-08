@@ -38,14 +38,14 @@ body {
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #161b22;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #30363d;
+  background: #d1d5db;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #58a6ff44;
+  background: #9ca3af;
 }
 
 /* Number input — hide browser arrows */

@@ -120,7 +120,7 @@ function GitHubStarButton() {
 
   return (
     <a
-      href="https://github.com/EmreGuersoy/OT_anyware"
+      href="https://github.com/EmreGuersoy/anywarelab"
       target="_blank"
       rel="noopener noreferrer"
       onMouseEnter={() => setHovered(true)}
