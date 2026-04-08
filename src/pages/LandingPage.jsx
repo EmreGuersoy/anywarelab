@@ -40,10 +40,10 @@ export default function LandingPage() {
         {/* Soft radial glow */}
         <div className="absolute top-0 right-0 w-[55%] h-full bg-gradient-to-bl from-gray-100 via-transparent to-transparent pointer-events-none" />
 
-        <div className="relative w-full max-w-6xl mx-auto px-8 lg:px-16 flex flex-col lg:flex-row items-center gap-12 pt-16 pb-10">
+        <div className="relative w-full max-w-[1400px] mx-auto px-8 lg:px-16 flex flex-col lg:flex-row items-center gap-12 pt-16 pb-10">
 
           {/* Left: copy */}
-          <div className="flex-1 min-w-0">
+          <div className="lg:w-[38%] flex-shrink-0 min-w-0">
             <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-[1.08] tracking-tight mb-6">
               Design custom<br />
               <span className="text-gray-400">labware visually.</span>
@@ -87,7 +87,7 @@ export default function LandingPage() {
 
             {/* Stat pills */}
             <div className="flex flex-wrap gap-6 mt-12 pt-8 border-t border-gray-100">
-              {[['4', 'Labware types'], ['JSON + PNG', 'Export formats']].map(([val, label]) => (
+              {[['4', 'Labware types'], ['JSON + PNG + SVG', 'Export formats']].map(([val, label]) => (
                 <div key={label}>
                   <div className="text-xl font-bold text-gray-900">{val}</div>
                   <div className="text-[11px] text-gray-400 mt-0.5">{label}</div>
@@ -96,23 +96,16 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right: video placeholder */}
-          <div className="flex-shrink-0 w-full max-w-[380px] lg:max-w-[440px] relative">
-            <div className="relative rounded-3xl border border-gray-200 bg-gray-50 shadow-xl overflow-hidden aspect-video flex flex-col items-center justify-center gap-4">
-              {/* Play button */}
-              <div className="w-16 h-16 rounded-full bg-gray-900 flex items-center justify-center shadow-lg">
-                <svg className="w-7 h-7 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </div>
-              <div className="text-center">
-                <div className="text-sm font-semibold text-gray-700">Video coming soon</div>
-                <div className="text-[11px] text-gray-400 mt-1">A walkthrough of the designer</div>
-              </div>
-              {/* Corner decoration */}
-              <div className="absolute top-3 right-3 text-[9px] font-bold tracking-widest uppercase text-gray-300">
-                Demo
-              </div>
+          {/* Right: demo video */}
+          <div className="flex-1 w-full relative">
+            <div className="relative rounded-3xl border border-gray-200 shadow-xl overflow-hidden aspect-video">
+              <iframe
+                src="https://www.youtube.com/embed/zDijIYBUO1A"
+                title="Anywarelab demo"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full"
+              />
             </div>
           </div>
 
