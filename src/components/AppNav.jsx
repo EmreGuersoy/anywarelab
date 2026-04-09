@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState, useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, Link, useLocation } from 'react-router-dom'
 
 const SUPPORT_LINKS = [
   { to: 'https://anywarelab.readthedocs.io', label: 'Docs', external: true },
@@ -39,10 +39,13 @@ export function AppNav() {
   return (
     <header className="flex items-center px-6 bg-white border-b border-gray-200 flex-shrink-0 h-14 relative z-50">
 
-      {/* Left: app title */}
-      <span className="font-bold text-base tracking-tight text-gray-900 w-[240px] flex-shrink-0">
-        Anywarelab
-      </span>
+      {/* Left: logo + app title */}
+      <Link to="/" className="flex items-center gap-2 w-[240px] flex-shrink-0 group">
+        <img src="/anywarelabicon.svg" alt="Anywarelab logo" className="h-7 w-7 flex-shrink-0" />
+        <span className="font-bold text-base tracking-tight text-gray-900 group-hover:text-gray-700 transition-colors">
+          Anywarelab
+        </span>
+      </Link>
 
       {/* Center: nav links */}
       <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-7">
