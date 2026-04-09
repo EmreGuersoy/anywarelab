@@ -1,5 +1,11 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
+import {
+  resolveWellPosition,
+  resolveGroupVsObstacles,
+  resolveAlignHOverlaps,
+  resolveAlignVOverlaps,
+} from '../utils/collision'
 
 let _gid = 0
 let _wid = 0
@@ -173,7 +179,12 @@ export const useLabwareStore = create(
         const g = s.wellGroups.find(g => g.id === groupId)
         if (!g) return
         const w = g.wells.find(w => w.id === wellId)
-        if (w) { w.x = x; w.y = y }
+        if (!w) return
+        const { xDimension, yDimension } = s.labwareConfig
+        const obstacles = s.wellGroups.flatMap(gr => gr.wells.filter(ow => ow.id !== wellId))
+        const resolved  = resolveWellPosition({ ...w, x, y }, obstacles)
+        w.x = Math.max(0, Math.min(xDimension, resolved.x))
+        w.y = Math.max(0, Math.min(yDimension, resolved.y))
       }),
 
     /**
@@ -206,15 +217,33 @@ export const useLabwareStore = create(
 
     moveSelectedWells: (dx, dy, xDim, yDim) =>
       set(s => {
+        const selIds   = new Set(s.selectedWells.filter(sw => sw.wellId).map(sw => sw.wellId))
+        const obstacles = s.wellGroups.flatMap(g => g.wells.filter(w => !selIds.has(w.id)))
+
+        // Gather mover wells with their candidate positions
+        const movers = []
         s.selectedWells.forEach(sel => {
           if (!sel.wellId) return
           const g = s.wellGroups.find(g => g.id === sel.groupId)
           if (!g) return
           const w = g.wells.find(w => w.id === sel.wellId)
-          if (w) {
-            w.x = Math.max(0, Math.min(xDim, w.x + dx))
-            w.y = Math.max(0, Math.min(yDim, w.y + dy))
-          }
+          if (w) movers.push({
+            wellRef: w,
+            // snapshot for collision math (plain object, not Immer proxy)
+            ...w,
+            groupId: sel.groupId,
+            x: Math.max(0, Math.min(xDim, w.x + dx)),
+            y: Math.max(0, Math.min(yDim, w.y + dy)),
+          })
+        })
+
+        // Find aggregate offset that pushes the entire group clear of obstacles
+        const adj = resolveGroupVsObstacles(movers, obstacles)
+
+        // Apply final positions back to store wells
+        movers.forEach(m => {
+          m.wellRef.x = Math.max(0, Math.min(xDim, m.x + adj.dx))
+          m.wellRef.y = Math.max(0, Math.min(yDim, m.y + adj.dy))
         })
       }),
 
@@ -380,32 +409,50 @@ export const useLabwareStore = create(
       set(s => {
         const { selectedWells, wellGroups } = s
         if (selectedWells.length < 2) return
-        const anchor = selectedWells[0]
+        const anchor     = selectedWells[0]
         const anchorWell = wellGroups
           .find(g => g.id === anchor.groupId)
           ?.wells.find(w => w.id === anchor.wellId)
         if (!anchorWell) return
+        // Align Y to anchor
         selectedWells.slice(1).forEach(sel => {
           if (!sel.wellId) return
           const w = wellGroups.find(g => g.id === sel.groupId)?.wells.find(w => w.id === sel.wellId)
           if (w) w.y = anchorWell.y
         })
+        // Resolve X overlaps among the aligned wells
+        const aligned = selectedWells.flatMap(sel => {
+          if (!sel.wellId) return []
+          const g = wellGroups.find(g => g.id === sel.groupId)
+          const w = g?.wells.find(w => w.id === sel.wellId)
+          return w ? [w] : []
+        })
+        resolveAlignHOverlaps(aligned)
       }),
 
     alignV: () =>
       set(s => {
         const { selectedWells, wellGroups } = s
         if (selectedWells.length < 2) return
-        const anchor = selectedWells[0]
+        const anchor     = selectedWells[0]
         const anchorWell = wellGroups
           .find(g => g.id === anchor.groupId)
           ?.wells.find(w => w.id === anchor.wellId)
         if (!anchorWell) return
+        // Align X to anchor
         selectedWells.slice(1).forEach(sel => {
           if (!sel.wellId) return
           const w = wellGroups.find(g => g.id === sel.groupId)?.wells.find(w => w.id === sel.wellId)
           if (w) w.x = anchorWell.x
         })
+        // Resolve Y overlaps among the aligned wells
+        const aligned = selectedWells.flatMap(sel => {
+          if (!sel.wellId) return []
+          const g = wellGroups.find(g => g.id === sel.groupId)
+          const w = g?.wells.find(w => w.id === sel.wellId)
+          return w ? [w] : []
+        })
+        resolveAlignVOverlaps(aligned)
       }),
 
     // ── Actions: distribution ─────────────────────────────────────────────────

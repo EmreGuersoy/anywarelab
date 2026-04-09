@@ -1,13 +1,35 @@
 import { useState } from 'react'
+import { PageFooter } from '../../components/PageFooter'
+
+const FORMSPREE_URL = 'https://formspree.io/f/mlgokrgz'
 
 export default function ContactPage() {
-  const [sent, setSent] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' })
+  const [sent,    setSent]    = useState(false)
+  const [error,   setError]   = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [form,    setForm]    = useState({ name: '', email: '', subject: '', message: '' })
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    // Placeholder — wire up to a backend or mailto in production
-    setSent(true)
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(FORMSPREE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSent(true)
+      } else {
+        setError(data?.errors?.[0]?.message ?? 'Something went wrong. Please try again.')
+      }
+    } catch {
+      setError('Network error. Please check your connection and try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const field = (id, label, type = 'text', required = true) => (
@@ -71,11 +93,17 @@ export default function ContactPage() {
               />
             </div>
 
+            {error && (
+              <div className="px-3 py-2 rounded bg-red-50 border border-red-200 text-xs text-red-700">
+                {error}
+              </div>
+            )}
             <button
               type="submit"
-              className="w-full py-2 rounded bg-gray-900 text-white text-sm font-semibold hover:bg-gray-700 transition-colors"
+              disabled={loading}
+              className="w-full py-2 rounded bg-gray-900 text-white text-sm font-semibold hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Send Message
+              {loading ? 'Sending…' : 'Send Message'}
             </button>
           </form>
         )}
@@ -98,6 +126,7 @@ export default function ContactPage() {
         </div>
 
       </div>
+      <PageFooter />
     </div>
   )
 }

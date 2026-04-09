@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PageFooter } from '../../components/PageFooter'
 
 const FAQS = [
   {
@@ -76,6 +77,7 @@ export default function FaqPage() {
         </div>
 
       </div>
+      <PageFooter />
     </div>
   )
 }

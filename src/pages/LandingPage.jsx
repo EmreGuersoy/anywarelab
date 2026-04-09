@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { PageFooter } from '../components/PageFooter'
 
 // ── Step ──────────────────────────────────────────────────────────────────────
 
@@ -136,6 +137,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <PageFooter />
 
     </div>
   )

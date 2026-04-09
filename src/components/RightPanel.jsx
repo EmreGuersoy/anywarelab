@@ -179,55 +179,101 @@ function GroupSection() {
 
 function AlignSection() {
   const {
-    selectedWells, alignH, alignV, distributeH, distributeV, clearSelection,
-    copySelectedWells, pasteWells, clipboard,
+    selectedWells, wellGroups, setWellPositions,
     alignToPlateLeft, alignToPlateCenterH, alignToPlateRight,
     alignToPlateTop, alignToPlateCenterV, alignToPlateBottom,
     snapshot,
   } = useLabwareStore()
-  const [gapStr, setGapStr] = useState('')
   const { labelMap } = useLabelMap()
 
   if (selectedWells.length < 1) return null
 
-  const anchor      = selectedWells[0]
-  const anchorLabel = anchor ? (labelMap.get(selKey(anchor)) ?? anchor.name) : '—'
-
-  const canMulti      = selectedWells.filter(w => w.wellId !== null).length >= 2
-  const gapValue      = gapStr === '' ? null : parseFloat(gapStr)
-  const gapValid      = gapStr === '' || (!isNaN(gapValue) && gapValue >= 0)
+  const canMulti = selectedWells.filter(w => w.wellId !== null).length >= 2
 
   const plateBtnCls = 'flex-1 py-1.5 rounded border text-[10px] font-medium transition-colors ' +
     'border-gray-700 bg-gray-700 text-white hover:bg-gray-600'
 
+  // Resolve label-based keys for a selection entry
+  function colOf(sel) {
+    return labelMap.get(`${sel.groupId}::id::${sel.wellId}`)?.match(/(\d+)$/)?.[1] ?? '__'
+  }
+
+  // Look up the actual well object for a selection entry
+  function resolveWell(sel) {
+    const g = wellGroups.find(g => g.id === sel.groupId)
+    return g?.wells.find(w => w.id === sel.wellId) ?? null
+  }
+
+  // Align H: set all selected wells to the same Y as the first selected well, then resolve X overlaps
+  function handleAlignH() {
+    const items = []
+    selectedWells.forEach(sel => {
+      if (!sel.wellId) return
+      const w = resolveWell(sel)
+      if (w) items.push({ groupId: sel.groupId, wellId: sel.wellId, w })
+    })
+    if (items.length < 2) return
+
+    const anchorY = items[0].w.y
+    const moved = items.map(({ groupId, wellId, w }) => ({
+      groupId, wellId,
+      x: w.x, y: anchorY,
+      shape: w.shape, diameter: w.diameter,
+      xDimension: w.xDimension, yDimension: w.yDimension,
+    }))
+    // Resolve X overlaps
+    moved.sort((a, b) => a.x - b.x)
+    for (let i = 1; i < moved.length; i++) {
+      const prev = moved[i - 1], curr = moved[i]
+      const minDist = (prev.shape === 'circular' ? prev.diameter / 2 : prev.xDimension / 2)
+                    + (curr.shape === 'circular' ? curr.diameter / 2 : curr.xDimension / 2)
+      if (curr.x - prev.x < minDist) curr.x = prev.x + minDist
+    }
+
+    snapshot()
+    setWellPositions(moved.map(({ groupId, wellId, x, y }) => ({ groupId, wellId, x, y })))
+  }
+
+  // Align V: group by column number → each column aligns to its first-selected well's X
+  function handleAlignV() {
+    const colGroups = new Map()
+    selectedWells.forEach(sel => {
+      if (!sel.wellId) return
+      const col = colOf(sel)
+      if (!colGroups.has(col)) colGroups.set(col, [])
+      const w = resolveWell(sel)
+      if (w) colGroups.get(col).push({ groupId: sel.groupId, wellId: sel.wellId, w })
+    })
+
+    const updates = []
+    colGroups.forEach(group => {
+      const anchorX = group[0].w.x
+      // Assign anchor X to all in group, carry current Y
+      const moved = group.map(({ groupId, wellId, w }) => ({
+        groupId, wellId,
+        x: anchorX, y: w.y,
+        shape: w.shape, diameter: w.diameter,
+        xDimension: w.xDimension, yDimension: w.yDimension,
+      }))
+      // Resolve Y overlaps within the column
+      moved.sort((a, b) => a.y - b.y)
+      for (let i = 1; i < moved.length; i++) {
+        const prev = moved[i - 1], curr = moved[i]
+        const minDist = (prev.shape === 'circular' ? prev.diameter / 2 : prev.yDimension / 2)
+                      + (curr.shape === 'circular' ? curr.diameter / 2 : curr.yDimension / 2)
+        if (curr.y - prev.y < minDist) curr.y = prev.y + minDist
+      }
+      moved.forEach(({ groupId, wellId, x, y }) => updates.push({ groupId, wellId, x, y }))
+    })
+
+    snapshot()
+    setWellPositions(updates)
+  }
+
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader tooltip="Align the selection to the plate edges or its centre. With multiple wells selected, align them to each other or distribute them with a custom gap. Relative spacing between wells is always preserved.">Align &amp; Distribute</SectionHeader>
+      <SectionHeader tooltip="Align the selection to the plate edges or centre. Align H groups wells by row and aligns each row to its first-selected Y. Align V groups by column and aligns each column to its first-selected X.">Align &amp; Distribute</SectionHeader>
       <div className="px-3 py-2.5 space-y-2.5">
-
-        {/* Selection count + copy/paste/clear */}
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] text-gray-600">
-            <span className="font-semibold text-gray-900">{selectedWells.length}</span> well{selectedWells.length !== 1 ? 's' : ''} selected
-          </span>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={copySelectedWells}
-              title="Copy selected wells  [Ctrl+C]"
-              className="text-[9px] px-1.5 py-0.5 rounded border border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-400 transition-colors"
-            >⎘ Copy</button>
-            {clipboard && (
-              <button
-                onClick={pasteWells}
-                title="Paste wells (+5 mm offset)  [Ctrl+V]"
-                className="text-[9px] px-1.5 py-0.5 rounded border border-gray-700 bg-gray-700 text-white hover:bg-gray-600 transition-colors"
-              >⎘ Paste</button>
-            )}
-            <button onClick={clearSelection} className="text-[9px] text-gray-400 hover:text-gray-700 transition-colors">
-              ✕ Clear
-            </button>
-          </div>
-        </div>
 
         {/* Align to plate */}
         <div>
@@ -242,47 +288,15 @@ function AlignSection() {
           </div>
         </div>
 
-        {/* Align / Distribute (multi-select only) */}
+        {/* Align to Well — multi-select only */}
         {canMulti && (
-          <>
-            <div className="text-[9px] bg-gray-50 border border-gray-200 rounded px-2 py-1 text-gray-500">
-              Anchor: <span className="font-semibold text-gray-800">{anchorLabel}</span>
-              <span className="text-gray-400"> (first selected)</span>
+          <div>
+            <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Align to Well</div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button onClick={handleAlignH} className={opBtnCls(true)} title="Align each row to its first-selected well's Y">↔ Align H</button>
+              <button onClick={handleAlignV} className={opBtnCls(true)} title="Align each column to its first-selected well's X">↕ Align V</button>
             </div>
-
-            <div>
-              <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Align to Each Other</div>
-              <div className="grid grid-cols-2 gap-1.5">
-                <button onClick={alignH} className={opBtnCls(true)}>↔ Align H</button>
-                <button onClick={alignV} className={opBtnCls(true)}>↕ Align V</button>
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1.5">Distribute</div>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <div className="flex items-center gap-1 flex-1 bg-gray-50 border border-gray-200 rounded px-2 py-0.5">
-                  <span className="text-[9px] text-gray-500 flex-shrink-0">Gap</span>
-                  <input
-                    type="number" min="0" step="0.1" placeholder="auto"
-                    value={gapStr} onChange={e => setGapStr(e.target.value)}
-                    className={'flex-1 bg-transparent text-[11px] text-right focus:outline-none ' + (gapValid ? 'text-gray-800' : 'text-red-500')}
-                  />
-                  <span className="text-[9px] text-gray-400 flex-shrink-0">mm</span>
-                </div>
-                {gapStr !== '' && (
-                  <button onClick={() => setGapStr('')} className="text-[9px] text-gray-400 hover:text-gray-700 flex-shrink-0" title="Reset to symmetric">✕</button>
-                )}
-              </div>
-              <div className="text-[9px] text-gray-400 mb-1.5">
-                {gapStr === '' ? 'Symmetric — equal center spacing between outermost' : `Fixed ${gapValue >= 0 ? gapValue?.toFixed(2) : '?'} mm edge-to-edge gap`}
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                <button onClick={() => { if (gapValid) distributeH(gapValue) }} disabled={!gapValid} className={opBtnCls(gapValid)}>⟺ Dist. H</button>
-                <button onClick={() => { if (gapValid) distributeV(gapValue) }} disabled={!gapValid} className={opBtnCls(gapValid)}>⟷ Dist. V</button>
-              </div>
-            </div>
-          </>
+          </div>
         )}
 
       </div>
