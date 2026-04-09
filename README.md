@@ -34,7 +34,7 @@ While we recommend using our official web domain (coming soon), you can easily r
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/<your-username>/anywarelab.git
+    git clone https://github.com/EmreGuersoy/anywarelab.git
     cd anywarelab
     ```
 
