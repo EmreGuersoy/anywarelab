@@ -123,7 +123,7 @@ export default function AboutPage() {
                 Incorrect definitions can cause pipette crashes, missed wells, or damaged equipment. Always verify your dimensions against the physical labware before running a protocol.
               </p>
               <a
-                href="https://support.opentrons.com/s/article/Labware-Library"
+                href="https://support.opentrons.com/s/article/Creating-Custom-Labware-Definitions"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-xs font-semibold text-amber-800 hover:text-amber-900 underline underline-offset-2 transition-colors"
