@@ -72,3 +72,5 @@ npm run preview
 ## 🛡️ Privacy & Data
 
 Anywarelab is hosted as a static site via Vercel. We do not use a database, and we do not store personal data, labware designs, or geometry files.
+
+We use **Vercel Analytics** to count the number of visitors to the site. No personal data, identifiers, or usage details are collected — only aggregate visitor counts.
