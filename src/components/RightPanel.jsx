@@ -194,6 +194,9 @@ function AlignSection() {
     'border-gray-700 bg-gray-700 text-white hover:bg-gray-600'
 
   // Resolve label-based keys for a selection entry
+  function rowOf(sel) {
+    return labelMap.get(`${sel.groupId}::id::${sel.wellId}`)?.match(/^([A-Z]+)/)?.[1] ?? '__'
+  }
   function colOf(sel) {
     return labelMap.get(`${sel.groupId}::id::${sel.wellId}`)?.match(/(\d+)$/)?.[1] ?? '__'
   }
@@ -204,34 +207,46 @@ function AlignSection() {
     return g?.wells.find(w => w.id === sel.wellId) ?? null
   }
 
-  // Align H: set all selected wells to the same Y as the first selected well, then resolve X overlaps
+  // Align H: group by row label → each row aligns to its first-selected well's Y, resolve X overlaps.
+  // Fallback: if every row has exactly 1 well (nothing to align within rows), treat all as one group.
   function handleAlignH() {
-    const items = []
+    const rowGroups = new Map()
     selectedWells.forEach(sel => {
       if (!sel.wellId) return
+      const row = rowOf(sel)
+      if (!rowGroups.has(row)) rowGroups.set(row, [])
       const w = resolveWell(sel)
-      if (w) items.push({ groupId: sel.groupId, wellId: sel.wellId, w })
+      if (w) rowGroups.get(row).push({ groupId: sel.groupId, wellId: sel.wellId, w })
     })
-    if (items.length < 2) return
 
-    const anchorY = items[0].w.y
-    const moved = items.map(({ groupId, wellId, w }) => ({
-      groupId, wellId,
-      x: w.x, y: anchorY,
-      shape: w.shape, diameter: w.diameter,
-      xDimension: w.xDimension, yDimension: w.yDimension,
-    }))
-    // Resolve X overlaps
-    moved.sort((a, b) => a.x - b.x)
-    for (let i = 1; i < moved.length; i++) {
-      const prev = moved[i - 1], curr = moved[i]
-      const minDist = (prev.shape === 'circular' ? prev.diameter / 2 : prev.xDimension / 2)
-                    + (curr.shape === 'circular' ? curr.diameter / 2 : curr.xDimension / 2)
-      if (curr.x - prev.x < minDist) curr.x = prev.x + minDist
-    }
+    // If every row group has only 1 well there is nothing to align within rows —
+    // fall back to aligning all selected wells to the first well's Y.
+    const allSingletons = [...rowGroups.values()].every(g => g.length === 1)
+    const groups = allSingletons
+      ? [[ ...rowGroups.values()].flat()]   // one big group
+      : [...rowGroups.values()]
+
+    const updates = []
+    groups.forEach(group => {
+      const anchorY = group[0].w.y
+      const moved = group.map(({ groupId, wellId, w }) => ({
+        groupId, wellId,
+        x: w.x, y: anchorY,
+        shape: w.shape, diameter: w.diameter,
+        xDimension: w.xDimension, yDimension: w.yDimension,
+      }))
+      moved.sort((a, b) => a.x - b.x)
+      for (let i = 1; i < moved.length; i++) {
+        const prev = moved[i - 1], curr = moved[i]
+        const minDist = (prev.shape === 'circular' ? prev.diameter / 2 : prev.xDimension / 2)
+                      + (curr.shape === 'circular' ? curr.diameter / 2 : curr.xDimension / 2)
+        if (curr.x - prev.x < minDist) curr.x = prev.x + minDist
+      }
+      moved.forEach(({ groupId, wellId, x, y }) => updates.push({ groupId, wellId, x, y }))
+    })
 
     snapshot()
-    setWellPositions(moved.map(({ groupId, wellId, x, y }) => ({ groupId, wellId, x, y })))
+    setWellPositions(updates)
   }
 
   // Align V: group by column number → each column aligns to its first-selected well's X
@@ -511,34 +526,59 @@ function SpacingSection() {
 
   if (!well || !match) return null
 
-  function applyToRow() {
-    const rowWells = flatWells
-      .filter(fw => { const m = fw.label.match(/^([A-Z]+)\d+$/); return m && m[1] === rowLetter })
-      .sort((a, b) => parseInt(a.label.match(/\d+$/)[0]) - parseInt(b.label.match(/\d+$/)[0]))
-    if (rowWells.length === 0) return
-    const anchorX = rowWells[0].x
-    const updates = rowWells.map((fw, i) => {
-      const [gid, wid] = fw.key.split('::id::')
-      return { groupId: gid, wellId: wid, x: anchorX + i * xPitch }
+  // Collect unique row letters / col numbers across the entire selection
+  const selectedRowLetters = [...new Set(
+    selectedWells.flatMap(sw => {
+      const lbl = labelMap.get(`${sw.groupId}::id::${sw.wellId}`)
+      const m = lbl?.match(/^([A-Z]+)\d+$/)
+      return m ? [m[1]] : []
     })
+  )].sort()
+
+  const selectedColNums = [...new Set(
+    selectedWells.flatMap(sw => {
+      const lbl = labelMap.get(`${sw.groupId}::id::${sw.wellId}`)
+      const m = lbl?.match(/^[A-Z]+(\d+)$/)
+      return m ? [parseInt(m[1])] : []
+    })
+  )].sort((a, b) => a - b)
+
+  function applyToRow() {
+    const updates = []
+    selectedRowLetters.forEach(row => {
+      const rowWells = flatWells
+        .filter(fw => { const m = fw.label.match(/^([A-Z]+)\d+$/); return m && m[1] === row })
+        .sort((a, b) => parseInt(a.label.match(/\d+$/)[0]) - parseInt(b.label.match(/\d+$/)[0]))
+      if (rowWells.length === 0) return
+      const anchorX = rowWells[0].x
+      rowWells.forEach((fw, i) => {
+        const [gid, wid] = fw.key.split('::id::')
+        updates.push({ groupId: gid, wellId: wid, x: anchorX + i * xPitch })
+      })
+    })
+    if (updates.length === 0) return
     snapshot()
     setWellPositions(updates)
   }
 
   function applyToColumn() {
-    const colWells = flatWells
-      .filter(fw => { const m = fw.label.match(/^[A-Z]+(\d+)$/); return m && parseInt(m[1]) === colNum })
-      .sort((a, b) => {
-        const ra = a.label.match(/^([A-Z]+)/)[1]
-        const rb = b.label.match(/^([A-Z]+)/)[1]
-        return ra < rb ? -1 : ra > rb ? 1 : 0
+    const updates = []
+    selectedColNums.forEach(col => {
+      const colWells = flatWells
+        .filter(fw => { const m = fw.label.match(/^[A-Z]+(\d+)$/); return m && parseInt(m[1]) === col })
+        .sort((a, b) => {
+          const ra = a.label.match(/^([A-Z]+)/)[1]
+          const rb = b.label.match(/^([A-Z]+)/)[1]
+          return ra < rb ? -1 : ra > rb ? 1 : 0
+        })
+      if (colWells.length === 0) return
+      const anchorY = colWells[0].y
+      colWells.forEach((fw, i) => {
+        const [gid, wid] = fw.key.split('::id::')
+        updates.push({ groupId: gid, wellId: wid, y: anchorY - i * yPitch })
       })
-    if (colWells.length === 0) return
-    const anchorY = colWells[0].y
-    const updates = colWells.map((fw, i) => {
-      const [gid, wid] = fw.key.split('::id::')
-      return { groupId: gid, wellId: wid, y: anchorY - i * yPitch }
     })
+    if (updates.length === 0) return
     snapshot()
     setWellPositions(updates)
   }
@@ -599,7 +639,7 @@ function SpacingSection() {
           }
           <div className={isMulti ? 'grid grid-cols-2 gap-1' : ''}>
             <button onClick={applyToRow} className={applyBtn}>
-              Apply X to Row {rowLetter}
+              {selectedRowLetters.length > 1 ? 'Apply X to Rows' : `Apply X to Row ${selectedRowLetters[0]}`}
             </button>
             {isMulti && (
               <button onClick={applyXToSelection} className={applyBtn}>
@@ -625,7 +665,7 @@ function SpacingSection() {
           }
           <div className={isMulti ? 'grid grid-cols-2 gap-1' : ''}>
             <button onClick={applyToColumn} className={applyBtn}>
-              Apply Y to Column {colNum}
+              {selectedColNums.length > 1 ? 'Apply Y to Cols' : `Apply Y to Col ${selectedColNums[0]}`}
             </button>
             {isMulti && (
               <button onClick={applyYToSelection} className={applyBtn}>
@@ -644,19 +684,38 @@ function SpacingSection() {
 
 function MultiWellsSection() {
   const { pendingMultiWells, clearPendingMultiWells, addWellGroup, addMultipleWells,
-          setSelectedWells, setActiveTool, snapshot } = useLabwareStore()
+          setSelectedWells, setActiveTool, snapshot, labwareConfig } = useLabwareStore()
 
   const region = pendingMultiWells?.region ?? null
 
   const w = region ? Math.abs(region.x2 - region.x1) : 0
   const h = region ? Math.abs(region.y2 - region.y1) : 0
 
-  const [rows,   setRows]   = useState('4')
-  const [cols,   setCols]   = useState('6')
-  const [xSp,    setXSp]    = useState(9)
-  const [ySp,    setYSp]    = useState(9)
-  const [xStart, setXStart] = useState(0)
-  const [yStart, setYStart] = useState(0)
+  const labwareType  = labwareConfig.labwareType
+  const isTubeOrTip  = labwareType === 'tubeRack' || labwareType === 'tipRack'
+  const isReservoir  = labwareType === 'reservoir'
+
+  const sectionTitle = {
+    wellPlate: 'Place Multiple Wells',
+    reservoir: 'Place Multiple Reservoirs',
+    tubeRack:  'Place Multiple Tubes',
+    tipRack:   'Place Multiple Tips',
+  }[labwareType] ?? 'Place Multiple Wells'
+
+  const [rows,      setRows]      = useState('4')
+  const [cols,      setCols]      = useState('6')
+  const [xSp,       setXSp]       = useState(9)
+  const [ySp,       setYSp]       = useState(9)
+  const [xStart,    setXStart]    = useState(0)
+  const [yStart,    setYStart]    = useState(0)
+  const [shape,       setShape]       = useState('circular')
+  const [diameter,    setDiameter]    = useState(6.86)
+  const [xDim,        setXDim]        = useState(8.2)
+  const [yDim,        setYDim]        = useState(8.2)
+  const [depth,       setDepth]       = useState(10.67)
+  const [volume,      setVolume]      = useState(200)
+  const [volumeUnit,  setVolumeUnit]  = useState('uL')
+  const [bottomShape, setBottomShape] = useState('flat')
 
   const rowsNum = parseInt(rows) || 0
   const colsNum = parseInt(cols) || 0
@@ -667,12 +726,23 @@ function MultiWellsSection() {
   const regionKey = region ? `${region.x1},${region.y1},${region.x2},${region.y2}` : ''
   useEffect(() => {
     if (!region) return
-    const c = parseInt(cols) || 1
-    const r = parseInt(rows) || 1
-    setXSp(+(c > 1 ? w / (c - 1) : 9).toFixed(2))
-    setYSp(+(r > 1 ? h / (r - 1) : 9).toFixed(2))
     setXStart(+region.x1.toFixed(2))
     setYStart(+region.y2.toFixed(2))
+    if (isReservoir) {
+      // Reservoir: single well filling the dragged region
+      setRows('1')
+      setCols('1')
+      setShape('rectangular')
+      setXDim(+w.toFixed(2))
+      setYDim(+h.toFixed(2))
+      setXSp(+w.toFixed(2))
+      setYSp(+h.toFixed(2))
+    } else {
+      const c = parseInt(cols) || 1
+      const r = parseInt(rows) || 1
+      setXSp(+(c > 1 ? w / (c - 1) : 9).toFixed(2))
+      setYSp(+(r > 1 ? h / (r - 1) : 9).toFixed(2))
+    }
   }, [regionKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -684,6 +754,12 @@ function MultiWellsSection() {
     const r = parseInt(rows) || 1
     if (region) setYSp(+(r > 1 ? h / (r - 1) : 9).toFixed(2))
   }, [rows]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync X spacing to the well's X dimension whenever it changes
+  useEffect(() => {
+    if (isTubeOrTip) return
+    setXSp(+(shape === 'circular' ? diameter : xDim).toFixed(2))
+  }, [diameter, xDim, shape]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!region) return null
 
@@ -698,7 +774,15 @@ function MultiWellsSection() {
         positions.push({ x: xStart + c * xSp, y: yStart - r * ySp })
       }
     }
-    addMultipleWells(groupId, positions)
+    const resolvedShape = (isTubeOrTip || (!isReservoir && shape === 'circular')) ? 'circular' : 'rectangular'
+    const totalLiquidVolume = volumeUnit === 'mL' ? volume * 1000 : volume
+    const wellProps = {
+      ...(resolvedShape === 'circular'
+        ? { shape: 'circular', diameter }
+        : { shape: 'rectangular', xDimension: xDim, yDimension: yDim }),
+      depth, totalLiquidVolume, bottomShape,
+    }
+    addMultipleWells(groupId, positions, wellProps)
     clearPendingMultiWells()
     setActiveTool('select')
     const newGroup = useLabwareStore.getState().wellGroups.find(g => g.id === groupId)
@@ -711,11 +795,73 @@ function MultiWellsSection() {
 
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader tooltip="Fill the dragged region with a uniform grid of wells. Rows and columns must each be at least 1. Well properties are inherited from the last selected well.">Place Multiple Wells</SectionHeader>
+      <SectionHeader tooltip="Fill the dragged region with a uniform grid. Rows and columns must each be at least 1.">{sectionTitle}</SectionHeader>
       <div className="px-3 py-2 space-y-1.5">
 
         <div className="text-[9px] text-gray-400 bg-gray-50 border border-gray-100 rounded px-2 py-1">
           Region: {w.toFixed(1)} × {h.toFixed(1)} mm
+        </div>
+
+        {/* Shape + dimensions — well plates only (tube/tip = always circular, reservoir = always rect) */}
+        <div className="border-b border-gray-100 pb-1.5 space-y-1">
+          {!isTubeOrTip && !isReservoir && (
+            <Field label="Shape">
+              <Seg
+                value={shape}
+                onChange={setShape}
+                options={[
+                  { label: '○ Circular', value: 'circular'    },
+                  { label: '□ Rect',     value: 'rectangular' },
+                ]}
+              />
+            </Field>
+          )}
+          {isTubeOrTip || shape === 'circular' ? (
+            <Field label="Diameter" unit="mm">
+              <NumInput value={diameter} onChange={setDiameter} min={0.1} step={0.01} />
+            </Field>
+          ) : (
+            <>
+              <Field label="Length (X)" unit="mm">
+                <NumInput value={xDim} onChange={setXDim} min={0.1} step={0.01} />
+              </Field>
+              <Field label="Width (Y)" unit="mm">
+                <NumInput value={yDim} onChange={setYDim} min={0.1} step={0.01} />
+              </Field>
+            </>
+          )}
+          <Field label="Depth (Z)" unit="mm">
+            <NumInput value={depth} onChange={setDepth} min={0} step={0.01} />
+          </Field>
+          <Field label="Volume">
+            <NumInput
+              value={volumeUnit === 'mL' ? +(volume / 1000).toFixed(6) : volume}
+              onChange={v => setVolume(volumeUnit === 'mL' ? v * 1000 : v)}
+              min={0}
+              step={volumeUnit === 'mL' ? 0.001 : 1}
+            />
+            <select
+              value={volumeUnit}
+              onChange={e => setVolumeUnit(e.target.value)}
+              className="flex-shrink-0 text-[10px] text-gray-600 bg-white border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:border-blue-500 cursor-pointer"
+            >
+              <option value="uL">µL</option>
+              <option value="mL">mL</option>
+            </select>
+          </Field>
+          {labwareType !== 'tipRack' && (
+          <Field label="Bottom">
+            <SelectEl
+              value={bottomShape}
+              onChange={setBottomShape}
+              options={[
+                { label: 'Flat',     value: 'flat' },
+                { label: 'U-bottom', value: 'u'    },
+                { label: 'V-bottom', value: 'v'    },
+              ]}
+            />
+          </Field>
+          )}
         </div>
 
         {/* Rows */}
@@ -767,7 +913,7 @@ function MultiWellsSection() {
         </div>
 
         <div className="border-t border-gray-100 pt-1">
-          <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Origin</div>
+          <div className="text-[9px] uppercase tracking-widest text-gray-400 mb-1">Edge Offset</div>
           <Field label="X start" unit="mm">
             <NumInput value={xStart} onChange={setXStart} min={0} step={0.01} />
           </Field>
@@ -790,7 +936,7 @@ function MultiWellsSection() {
               (rowsValid && colsValid
                 ? 'bg-gray-700 hover:bg-gray-600 text-white'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed')}>
-            Add Wells
+            Add Grid
           </button>
           <button onClick={clearPendingMultiWells}
             className="px-3 py-1.5 bg-gray-100 text-gray-600 text-[11px] rounded hover:bg-gray-200 transition-colors">

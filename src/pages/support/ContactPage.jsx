@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { PageFooter } from '../../components/PageFooter'
 
-const FORMSPREE_URL = 'https://formspree.io/f/mlgokrgz'
+const FORMSPREE_URL = import.meta.env.VITE_FORMSPREE_URL
 
 export default function ContactPage() {
   const [sent,    setSent]    = useState(false)
