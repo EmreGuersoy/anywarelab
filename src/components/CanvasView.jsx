@@ -500,7 +500,7 @@ function StatusBar({ zoom, xDim, yDim, activeTool, selCount }) {
   const hints = {
     addWell:       '+ Click to place well',
     multipleWells: '⊞ Drag to place multiple wells',
-    reservoir:     '▬ Click to place reservoir',
+    reservoir:     '▬ Drag to place reservoir',
     erase:         '✕ Click well to delete',
     select:        selCount > 0 ? `${selCount} well${selCount > 1 ? 's' : ''} selected` : '',
   }
@@ -551,7 +551,7 @@ export function CanvasView({ fitSignal, exportPngSignal, exportSvgSignal }) {
     removeManualWell, removeSelectedWells, selectGroup,
     setActiveTool, setSelectedWells,
     clearSelection, toggleWellSelection, addWellsToSelection,
-    snapshot, setPendingMultiWells,
+    snapshot, setPendingMultiWells, clearPendingMultiWells,
   } = useLabwareStore()
 
   const { xDimension: xDim, yDimension: yDim } = labwareConfig
@@ -741,22 +741,8 @@ export function CanvasView({ fitSignal, exportPngSignal, exportSvgSignal }) {
       return
     }
 
-    if (activeTool === 'multipleWells' && onPlate) {
+    if ((activeTool === 'multipleWells' || activeTool === 'reservoir') && onPlate) {
       setDrawRect({ start: ot, end: ot })
-      return
-    }
-
-    if (activeTool === 'reservoir' && onPlate) {
-      snapshot()
-      addWellGroup({ name: 'Reservoir' })
-      const gid = useLabwareStore.getState().selectedGroupId
-      addManualWell(gid, xDim / 2, yDim / 2, {
-        shape:            'rectangular',
-        xDimension:       xDim - 16,
-        yDimension:       yDim - 16,
-        depth:            labwareConfig.zDimension - 2,
-        totalLiquidVolume: Math.round((xDim - 16) * (yDim - 16) * (labwareConfig.zDimension - 2) * 0.85),
-      })
       return
     }
 
@@ -789,6 +775,7 @@ export function CanvasView({ fitSignal, exportPngSignal, exportSvgSignal }) {
     }
     if (activeTool !== 'select') return
 
+    clearPendingMultiWells()
     selectGroup(group.id)
     const label = labelMap?.get(`${group.id}::id::${wellId}`) ?? ''
     const well  = { groupId: group.id, name: label, wellId }

@@ -95,10 +95,10 @@ const LABWARE_TYPES = [
 
 // Labels for the placement tools per labware type
 const TOOL_LABELS = {
-  wellPlate: { single: 'Add Well', grid: 'Add Grid',     singleDesc: 'Click to place a single well',     gridDesc: 'Drag to place a well grid'     },
-  reservoir: { single: 'Add Reservoir', grid: 'Add Grid', singleDesc: 'Click to place a reservoir',      gridDesc: 'Drag to place a reservoir grid' },
-  tubeRack:  { single: 'Add Tube', grid: 'Add Tube Grid',singleDesc: 'Click to place a single tube',     gridDesc: 'Drag to place a tube grid'     },
-  tipRack:   { single: 'Add Tip',  grid: 'Add Tip Grid', singleDesc: 'Click to place a single tip well', gridDesc: 'Drag to place a tip grid'      },
+  wellPlate: { single: 'Add Well',      grid: 'Add Grid',      singleDesc: 'Click to place a single well',     gridDesc: 'Drag to place a well grid',      sectionHeader: 'Add Wells'      },
+  reservoir: { single: 'Add Reservoir', grid: 'Add Grid',      singleDesc: 'Click to place a reservoir',      gridDesc: 'Drag to place a reservoir grid', sectionHeader: 'Add Reservoirs' },
+  tubeRack:  { single: 'Add Tube',      grid: 'Add Tube Grid', singleDesc: 'Click to place a single tube',    gridDesc: 'Drag to place a tube grid',      sectionHeader: 'Add Tubes'      },
+  tipRack:   { single: 'Add Tip',       grid: 'Add Tip Grid',  singleDesc: 'Click to place a single tip well', gridDesc: 'Drag to place a tip grid',      sectionHeader: 'Add Tips'       },
 }
 
 // ── Section: Labware Type ─────────────────────────────────────────────────────
@@ -244,7 +244,7 @@ function ToolsSection() {
 
   return (
     <div className="border-b border-gray-200">
-      <SectionHeader tooltip="Use the Add Well/Tip/Tube to place items individually, or the Grid Tool to click and drag a uniform array across a region. Need to make a change? Use the Select Tool to move or fine-tune dimensions after placement.">Add Wells</SectionHeader>
+      <SectionHeader tooltip="Use the Add Well/Tip/Tube to place items individually, or the Grid Tool to click and drag a uniform array across a region. Need to make a change? Use the Select Tool to move or fine-tune dimensions after placement.">{labels.sectionHeader}</SectionHeader>
       <div className="px-3 py-2 space-y-1.5">
         {tools.map(t => {
           const active = activeTool === t.id
