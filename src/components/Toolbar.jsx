@@ -8,7 +8,6 @@ import { useLabwareStore } from '../store/useLabwareStore'
 import { downloadSchema } from '../utils/schemaExport'
 import { parseLabwareJSON } from '../utils/schemaImport'
 import { validateLabware } from '../utils/validation'
-import { SaveTemplateModal } from './SaveTemplateModal'
 
 const TOOLS = [
   { id: 'select', label: 'Select', icon: '↖', key: 'v', tip: 'Select / drag  [V]' },
@@ -28,7 +27,6 @@ export function Toolbar({ onFitView, onExportPng, onExportSvg }) {
   const exportMenuRef  = useRef(null)
   const [exportOpen,   setExportOpen]   = useState(false)
   const [validation,   setValidation]   = useState(null)  // null | { errors, warnings }
-  const [shareOpen,    setShareOpen]    = useState(false)
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -175,17 +173,6 @@ export function Toolbar({ onFitView, onExportPng, onExportSvg }) {
           </div>
         )}
       </div>
-      <Divider />
-
-      {/* ── Share to Gallery ── */}
-      <button
-        onClick={() => setShareOpen(true)}
-        title="Share this design to the public gallery"
-        className="flex items-center gap-1.5 px-2 py-1 bg-white hover:bg-gray-100 text-gray-700 text-xs rounded border border-gray-300 transition-colors whitespace-nowrap flex-shrink-0"
-      >
-        ↑ Share
-      </button>
-
       {/* ── Export validation modal ── */}
       {validation && (
         <ExportValidationModal
@@ -194,9 +181,6 @@ export function Toolbar({ onFitView, onExportPng, onExportSvg }) {
           onExport={() => { downloadSchema(labwareConfig, wellGroups); setValidation(null) }}
           onClose={() => setValidation(null)}
         />
-      )}
-      {shareOpen && (
-        <SaveTemplateModal onClose={() => setShareOpen(false)} />
       )}
     </div>
   )

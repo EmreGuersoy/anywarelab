@@ -1,12 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppNav } from './components/AppNav'
 import { Editor } from './components/Editor'
-import LandingPage    from './pages/LandingPage'
-import AboutPage      from './pages/AboutPage'
-import TemplatesPage  from './pages/TemplatesPage'
-import AdminPage      from './pages/AdminPage'
-import FaqPage        from './pages/support/FaqPage'
-import ContactPage    from './pages/support/ContactPage'
+import LandingPage   from './pages/LandingPage'
+import AboutPage     from './pages/AboutPage'
+import FaqPage       from './pages/support/FaqPage'
+import ContactPage   from './pages/support/ContactPage'
 import './index.css'
 
 export default function App() {
@@ -18,8 +16,6 @@ export default function App() {
           <Routes>
             <Route path="/"                    element={<LandingPage />} />
             <Route path="/design"              element={<Editor />} />
-            <Route path="/templates"           element={<TemplatesPage />} />
-            <Route path="/admin"               element={<AdminPage />} />
             <Route path="/about"               element={<AboutPage />} />
             <Route path="/support"             element={<Navigate to="/support/faq" replace />} />
             <Route path="/support/faq"         element={<FaqPage />} />

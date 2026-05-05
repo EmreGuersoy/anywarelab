@@ -58,11 +58,7 @@ export function AppNav() {
           Design
         </NavLink>
 
-        <NavLink to="/templates" className={({ isActive }) => linkCls(isActive)}>
-          Gallery
-        </NavLink>
-
-        <NavLink to="/about" className={({ isActive }) => linkCls(isActive)}>
+<NavLink to="/about" className={({ isActive }) => linkCls(isActive)}>
           About
         </NavLink>
 
