@@ -5,14 +5,6 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'react-vendor':  ['react', 'react-dom', 'react-router-dom'],
-          'three-vendor':  ['three', '@react-three/fiber', '@react-three/drei'],
-          'supabase':      ['@supabase/supabase-js'],
-        },
-      },
-    },
+    chunkSizeWarningLimit: 1000,
   },
 })
